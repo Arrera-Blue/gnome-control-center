@@ -2,10 +2,10 @@ Name:           arrera-gnome-control-center
 Epoch:          1
 Version:        50.4
 Release:        0.1.beta1.arrera%{?dist}
-Summary:        Paramètres de GNOME avec extension Arrera Dock intégrée (Version Bêta)
+Summary:        Paramètres de GNOME custom pour intégrer l'intégraliter des parametre des extension gnome d'Arrera Blue
 
 License:        GPL-2.0-or-later
-URL:            https://gitlab.gnome.org/GNOME/gnome-control-center
+URL:            https://github.com/Arrera-Blue/gnome-control-center
 Source0:        %{name}-%{version}.tar.gz
 
 BuildRequires:  meson >= 0.60.0
