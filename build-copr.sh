@@ -7,7 +7,7 @@ cd "$SCRIPT_DIR"
 PKG_NAME="arrera-gnome-control-center"
 VERSION="50.4"
 SPEC_FILE="${PKG_NAME}.spec"
-DEFAULT_REPO="arrera-software/arrera_blue"
+DEFAULT_REPO="arrera-software/arrera-blue"
 
 echo "=================================================="
 echo "📦 Préparation du paquet RPM pour Copr"
@@ -15,7 +15,7 @@ echo "=================================================="
 
 # 1. Vérification des outils requis
 echo "🔍 [1/4] Vérification des outils nécessaires..."
-for tool in rpmbuild copr-cli tar; do
+for tool in rpmbuild copr-cli tar git meson; do
     if ! command -v "$tool" >/dev/null 2>&1; then
         echo "❌ Outil manquant : $tool. Veuillez l'installer (ex: sudo dnf install $tool)."
         exit 1
@@ -27,17 +27,23 @@ echo "📁 [2/4] Préparation de l'environnement rpmbuild..."
 RPMBUILD_DIR="$HOME/rpmbuild"
 mkdir -p "$RPMBUILD_DIR"/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}
 
-# 3. Création de l'archive source tarball (inclut les sous-projets mais exclut les dossiers temporaires)
+# Synchronisation des sous-projets requis (gvc et libgxdp) pour un build hors-ligne sur Copr
+echo "🔄 Synchronisation des sous-projets (git submodule et wraps)..."
+git submodule update --init --recursive
+if [ ! -d "subprojects/libgxdp" ] || [ -z "$(ls -A subprojects/libgxdp 2>/dev/null)" ]; then
+    meson subprojects download libgxdp
+fi
+
+# 3. Création de l'archive source tarball (inclut les sous-projets mais exclut les dossiers temporaires et VCS)
 echo "🗜️ [3/4] Création de l'archive source (${PKG_NAME}-${VERSION}.tar.gz)..."
 TMP_STAGE="$(mktemp -d)"
 mkdir -p "$TMP_STAGE/${PKG_NAME}-${VERSION}"
 
 # Copier tous les fichiers sources dans le dossier temporaire
-tar --exclude='./.git' \
+tar --exclude='.git' \
     --exclude='./_build' \
     --exclude='./build' \
-    --exclude='./subprojects/gvc/.git' \
-    --exclude='./subprojects/libgxdp/.git' \
+    --exclude='./.cache' \
     -cf - . | (cd "$TMP_STAGE/${PKG_NAME}-${VERSION}" && tar -xf -)
 
 # Générer l'archive .tar.gz finale dans rpmbuild/SOURCES

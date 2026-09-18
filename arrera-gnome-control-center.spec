@@ -1,7 +1,7 @@
 Name:           arrera-gnome-control-center
 Epoch:          1
 Version:        50.4
-Release:        0.1.beta1.arrera%{?dist}
+Release:        2026.beta.1%{?dist}
 Summary:        Paramètres de GNOME custom pour intégrer l'intégraliter des parametre des extension gnome d'Arrera Blue
 
 License:        GPL-2.0-or-later
