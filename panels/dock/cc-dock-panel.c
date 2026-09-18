@@ -14,6 +14,8 @@ struct _CcDockPanel
 
   GSettings   *dock_settings;
 
+  AdwBanner    *banner;
+  AdwPreferencesPage *preferences_page;
   AdwSwitchRow *autohide_row;
   AdwSwitchRow *wave_row;
   AdwSwitchRow *super_key_row;
@@ -135,6 +137,8 @@ cc_dock_panel_class_init (CcDockPanelClass *klass)
 
   gtk_widget_class_set_template_from_resource (widget_class, "/org/gnome/control-center/dock/cc-dock-panel.ui");
 
+  gtk_widget_class_bind_template_child (widget_class, CcDockPanel, banner);
+  gtk_widget_class_bind_template_child (widget_class, CcDockPanel, preferences_page);
   gtk_widget_class_bind_template_child (widget_class, CcDockPanel, autohide_row);
   gtk_widget_class_bind_template_child (widget_class, CcDockPanel, wave_row);
   gtk_widget_class_bind_template_child (widget_class, CcDockPanel, super_key_row);
@@ -162,12 +166,35 @@ cc_dock_panel_init (CcDockPanel *self)
 
   if (!schema)
     {
+      const gchar *ext_ids[] = {
+        "dock@linux.arrera-software.fr",
+        "arrera-dock",
+        NULL
+      };
+      const gchar *data_dir = g_get_user_data_dir ();
+
+      for (guint i = 0; ext_ids[i] != NULL && !schema; i++)
+        {
+          g_autofree gchar *schema_dir = g_build_filename (data_dir, "gnome-shell", "extensions", ext_ids[i], "schemas", NULL);
+          if (g_file_test (schema_dir, G_FILE_TEST_IS_DIR))
+            {
+              g_autoptr(GSettingsSchemaSource) ext_source =
+                g_settings_schema_source_new_from_directory (schema_dir, source, FALSE, NULL);
+              if (ext_source)
+                schema = g_settings_schema_source_lookup (ext_source, "org.gnome.shell.extensions.dock", TRUE);
+            }
+        }
+    }
+
+  if (!schema)
+    {
       g_warning ("Schema 'org.gnome.shell.extensions.dock' is not installed on the system.");
-      gtk_widget_set_sensitive (GTK_WIDGET (self), FALSE);
+      adw_banner_set_revealed (self->banner, TRUE);
+      gtk_widget_set_sensitive (GTK_WIDGET (self->preferences_page), FALSE);
       return;
     }
 
-  self->dock_settings = g_settings_new ("org.gnome.shell.extensions.dock");
+  self->dock_settings = g_settings_new_full (schema, NULL, NULL);
 
   /* 1. Liaison des booléens */
   if (g_settings_schema_has_key (schema, "autohide"))

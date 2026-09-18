@@ -26,6 +26,20 @@ if [ -f "panels/dock/icons/scalable/org.gnome.Settings-dock-symbolic.svg" ]; the
     cp -u "panels/dock/icons/scalable/org.gnome.Settings-dock-symbolic.svg" "$HOME/.local/share/icons/hicolor/scalable/apps/" 2>/dev/null || true
 fi
 
+# Synchronisation et compilation du schéma GSettings pour Arrera Dock
+EXT_SCHEMA=""
+if [ -f "$HOME/.local/share/gnome-shell/extensions/dock@linux.arrera-software.fr/schemas/org.gnome.shell.extensions.dock.gschema.xml" ]; then
+    EXT_SCHEMA="$HOME/.local/share/gnome-shell/extensions/dock@linux.arrera-software.fr/schemas/org.gnome.shell.extensions.dock.gschema.xml"
+elif [ -f "$HOME/.local/share/gnome-shell/extensions/arrera-dock/schemas/org.gnome.shell.extensions.dock.gschema.xml" ]; then
+    EXT_SCHEMA="$HOME/.local/share/gnome-shell/extensions/arrera-dock/schemas/org.gnome.shell.extensions.dock.gschema.xml"
+fi
+
+if [ -n "$EXT_SCHEMA" ]; then
+    mkdir -p "$HOME/.local/share/glib-2.0/schemas"
+    cp -u "$EXT_SCHEMA" "$HOME/.local/share/glib-2.0/schemas/"
+    glib-compile-schemas "$HOME/.local/share/glib-2.0/schemas"
+fi
+
 echo "🚀 Lancement de GNOME Settings..."
 if [ -n "$1" ]; then
     echo "→ Paramètre : $1"

@@ -6,7 +6,13 @@ template $CcDockPanel: $CcPanel {
     [top]
     Adw.HeaderBar {}
 
-    content: Adw.PreferencesPage {
+    [top]
+    Adw.Banner banner {
+      title: _("L'extension Arrera Dock ou son schéma GSettings n'est pas installée sur le système.");
+      revealed: false;
+    }
+
+    content: Adw.PreferencesPage preferences_page {
       Adw.PreferencesGroup {
         title: _("Comportement");
 
