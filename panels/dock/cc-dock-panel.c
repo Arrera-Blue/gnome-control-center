@@ -25,6 +25,9 @@ struct _CcDockPanel
   GtkWidget          *card_windows;
   GtkWidget          *card_windows_activity;
   GtkWidget          *card_nextstep;
+
+  AdwComboRow        *icon_size_row;
+  AdwComboRow        *position_row;
 };
 
 CC_PANEL_REGISTER (CcDockPanel, cc_dock_panel)
@@ -658,6 +661,96 @@ on_apply_flavor_nextstep_clicked (CcDockPanel *self)
     }
 }
 
+static gboolean
+icon_size_get_mapping (GValue   *value,
+                       GVariant *variant,
+                       gpointer  user_data)
+{
+  const gchar *str = g_variant_get_string (variant, NULL);
+  guint index = 1; /* medium par défaut */
+
+  if (g_strcmp0 (str, "small") == 0)
+    index = 0;
+  else if (g_strcmp0 (str, "medium") == 0)
+    index = 1;
+  else if (g_strcmp0 (str, "large") == 0)
+    index = 2;
+
+  g_value_set_uint (value, index);
+  return TRUE;
+}
+
+static GVariant *
+icon_size_set_mapping (const GValue       *value,
+                       const GVariantType *expected_type,
+                       gpointer            user_data)
+{
+  guint index = g_value_get_uint (value);
+  const gchar *str = "medium";
+
+  switch (index)
+    {
+    case 0:
+      str = "small";
+      break;
+    case 1:
+      str = "medium";
+      break;
+    case 2:
+      str = "large";
+      break;
+    default:
+      break;
+    }
+
+  return g_variant_new_string (str);
+}
+
+static gboolean
+position_get_mapping (GValue   *value,
+                      GVariant *variant,
+                      gpointer  user_data)
+{
+  const gchar *str = g_variant_get_string (variant, NULL);
+  guint index = 0; /* bottom par défaut */
+
+  if (g_strcmp0 (str, "bottom") == 0)
+    index = 0;
+  else if (g_strcmp0 (str, "left") == 0)
+    index = 1;
+  else if (g_strcmp0 (str, "right") == 0)
+    index = 2;
+
+  g_value_set_uint (value, index);
+  return TRUE;
+}
+
+static GVariant *
+position_set_mapping (const GValue       *value,
+                      const GVariantType *expected_type,
+                      gpointer            user_data)
+{
+  guint index = g_value_get_uint (value);
+  const gchar *str = "bottom";
+
+  switch (index)
+    {
+    case 0:
+      str = "bottom";
+      break;
+    case 1:
+      str = "left";
+      break;
+    case 2:
+      str = "right";
+      break;
+    default:
+      break;
+    }
+
+  return g_variant_new_string (str);
+}
+
 static void
 cc_dock_panel_finalize (GObject *object)
 {
@@ -689,6 +782,9 @@ cc_dock_panel_class_init (CcDockPanelClass *klass)
   gtk_widget_class_bind_template_child (widget_class, CcDockPanel, card_windows);
   gtk_widget_class_bind_template_child (widget_class, CcDockPanel, card_windows_activity);
   gtk_widget_class_bind_template_child (widget_class, CcDockPanel, card_nextstep);
+
+  gtk_widget_class_bind_template_child (widget_class, CcDockPanel, icon_size_row);
+  gtk_widget_class_bind_template_child (widget_class, CcDockPanel, position_row);
 
   gtk_widget_class_bind_template_callback (widget_class, on_apply_flavor_default_clicked);
   gtk_widget_class_bind_template_callback (widget_class, on_apply_flavor_noappmenu_clicked);
@@ -737,6 +833,32 @@ cc_dock_panel_init (CcDockPanel *self)
   self->dock_settings = load_settings_safely ("org.gnome.shell.extensions.dock", "dock@linux.arrera-software.fr");
   self->topbar_settings = load_settings_safely ("org.gnome.shell.extensions.top-bar", "top-bar@linux.arrera-software.fr");
   self->appmenu_settings = load_settings_safely ("org.gnome.shell.extensions.app-menu", "app-menu@linux.arrera-software.fr");
+
+  if (self->dock_settings)
+    {
+      GSettingsSchema *schema = NULL;
+      g_object_get (self->dock_settings, "settings-schema", &schema, NULL);
+      if (schema)
+        {
+          if (g_settings_schema_has_key (schema, "icon-size"))
+            g_settings_bind_with_mapping (self->dock_settings, "icon-size",
+                                          self->icon_size_row, "selected",
+                                          G_SETTINGS_BIND_DEFAULT,
+                                          icon_size_get_mapping,
+                                          icon_size_set_mapping,
+                                          NULL, NULL);
+
+          if (g_settings_schema_has_key (schema, "position"))
+            g_settings_bind_with_mapping (self->dock_settings, "position",
+                                          self->position_row, "selected",
+                                          G_SETTINGS_BIND_DEFAULT,
+                                          position_get_mapping,
+                                          position_set_mapping,
+                                          NULL, NULL);
+
+          g_settings_schema_unref (schema);
+        }
+    }
 
   update_selected_flavor_highlight (self);
 

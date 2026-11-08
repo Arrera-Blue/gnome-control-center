@@ -415,6 +415,32 @@ template $CcDockPanel: $CcPanel {
             }
           }
         }
+
+        Adw.PreferencesGroup {
+          title: _("Paramètres du dock");
+
+          Adw.ComboRow icon_size_row {
+            title: _("Taille des icônes");
+            model: StringList {
+              strings [
+                _("Petite"),
+                _("Moyenne"),
+                _("Grande"),
+              ]
+            };
+          }
+
+          Adw.ComboRow position_row {
+            title: _("Emplacement du dock");
+            model: StringList {
+              strings [
+                _("En bas"),
+                _("À gauche"),
+                _("À droite"),
+              ]
+            };
+          }
+        }
       };
     };
   };
