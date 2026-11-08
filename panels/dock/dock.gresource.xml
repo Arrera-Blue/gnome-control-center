@@ -2,5 +2,10 @@
 <gresources>
   <gresource prefix="/org/gnome/control-center/dock">
     <file preprocess="xml-stripblanks">cc-dock-panel.ui</file>
+    <file preprocess="xml-stripblanks">assets/flavor-default.svg</file>
+    <file preprocess="xml-stripblanks">assets/flavor-noappmenu.svg</file>
+    <file preprocess="xml-stripblanks">assets/flavor-windows.svg</file>
+    <file preprocess="xml-stripblanks">assets/flavor-windows-activity.svg</file>
+    <file preprocess="xml-stripblanks">assets/flavor-nextstep.svg</file>
   </gresource>
 </gresources>

@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="140" viewBox="0 0 240 140">
+  <!-- Cadre / Écran monochrome -->
+  <rect x="2" y="2" width="236" height="136" rx="8" ry="8" fill="#141414" stroke="#ffffff" stroke-width="1.2" stroke-opacity="0.3"/>
+  
+  <!-- Pas de top bar (bureau plein) -->
+  <rect x="25" y="16" width="165" height="85" rx="6" fill="#1b1b1b" stroke="#ffffff" stroke-width="0.9" stroke-opacity="0.25"/>
+  <rect x="25" y="16" width="165" height="13" rx="4" fill="#242424"/>
+  <rect x="34" y="20.5" width="24" height="4" rx="2" fill="#ffffff" fill-opacity="0.3"/>
+  <!-- Boutons de gestion de fenêtre à droite -->
+  <circle cx="166" cy="22.5" r="2.5" fill="#ffffff" fill-opacity="0.4"/>
+  <circle cx="174" cy="22.5" r="2.5" fill="#ffffff" fill-opacity="0.4"/>
+  <circle cx="182" cy="22.5" r="2.5" fill="#ffffff" fill-opacity="0.4"/>
+
+  <!-- Menu d'applications en bas à gauche -->
+  <rect x="10" y="45" width="70" height="70" rx="6" fill="#1c1c1c" stroke="#ffffff" stroke-width="1" stroke-opacity="0.5"/>
+  <rect x="15" y="51" width="60" height="6" rx="3" fill="#2a2a2a"/>
+  <rect x="17" y="63" width="11" height="11" rx="2.5" fill="#ffffff" fill-opacity="0.8"/>
+  <rect x="32" y="63" width="11" height="11" rx="2.5" fill="#ffffff" fill-opacity="0.5"/>
+  <rect x="47" y="63" width="11" height="11" rx="2.5" fill="#ffffff" fill-opacity="0.65"/>
+  <rect x="62" y="63" width="11" height="11" rx="2.5" fill="#ffffff" fill-opacity="0.5"/>
+  <rect x="17" y="78" width="11" height="11" rx="2.5" fill="#ffffff" fill-opacity="0.5"/>
+  <rect x="32" y="78" width="11" height="11" rx="2.5" fill="#ffffff" fill-opacity="0.75"/>
+  <rect x="47" y="78" width="11" height="11" rx="2.5" fill="#ffffff" fill-opacity="0.5"/>
+  <rect x="62" y="78" width="11" height="11" rx="2.5" fill="#ffffff" fill-opacity="0.8"/>
+
+  <!-- Bouton déclencheur en bas à gauche -->
+  <rect x="10" y="120" width="16" height="14" rx="3" fill="#222222" stroke="#ffffff" stroke-width="1" stroke-opacity="0.6"/>
+  <circle cx="18" cy="127" r="3.5" fill="#ffffff" fill-opacity="0.9"/>
+
+  <!-- Dock latéral droit en tuiles sombres détachées (NeXTStep Island Mode) -->
+  <!-- Tuile 1 (haut) : Logo Arrera / Activités -->
+  <rect x="212" y="24" width="22" height="22" rx="4.5" fill="#222222" stroke="#ffffff" stroke-width="1.2" stroke-opacity="0.75"/>
+  <circle cx="223" cy="35" r="4.5" fill="#ffffff" fill-opacity="0.95"/>
+
+  <!-- Tuile 2 : App 1 -->
+  <rect x="212" y="49" width="22" height="22" rx="4.5" fill="#222222" stroke="#ffffff" stroke-width="0.9" stroke-opacity="0.4"/>
+  <circle cx="223" cy="60" r="4.5" fill="#ffffff" fill-opacity="0.75"/>
+
+  <!-- Tuile 3 : App 2 -->
+  <rect x="212" y="74" width="22" height="22" rx="4.5" fill="#222222" stroke="#ffffff" stroke-width="0.9" stroke-opacity="0.4"/>
+  <circle cx="223" cy="85" r="4.5" fill="#ffffff" fill-opacity="0.55"/>
+
+  <!-- Tuile 4 : App 3 -->
+  <rect x="212" y="99" width="22" height="22" rx="4.5" fill="#222222" stroke="#ffffff" stroke-width="0.9" stroke-opacity="0.4"/>
+  <circle cx="223" cy="110" r="4.5" fill="#ffffff" fill-opacity="0.75"/>
+
+  <!-- Tuile 5 (bas) : Horloge / Paramètres rapides -->
+  <rect x="212" y="124" width="22" height="12" rx="3" fill="#222222" stroke="#ffffff" stroke-width="0.9" stroke-opacity="0.4"/>
+  <rect x="216" y="128" width="14" height="4" rx="1.5" fill="#ffffff" fill-opacity="0.8"/>
+</svg>

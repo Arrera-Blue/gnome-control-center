@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="140" viewBox="0 0 240 140">
+  <!-- Cadre / Écran monochrome -->
+  <rect x="2" y="2" width="236" height="136" rx="8" ry="8" fill="#141414" stroke="#ffffff" stroke-width="1.2" stroke-opacity="0.3"/>
+  
+  <!-- Barre supérieure monochrome -->
+  <rect x="4" y="4" width="232" height="14" fill="#222222"/>
+  <line x1="4" y1="18" x2="236" y2="18" stroke="#ffffff" stroke-width="0.8" stroke-opacity="0.15"/>
+  <circle cx="16" cy="11" r="3.5" fill="#ffffff" fill-opacity="0.9"/>
+  <rect x="105" y="9" width="30" height="4" rx="2" fill="#ffffff" fill-opacity="0.75"/>
+  <rect x="206" y="8" width="22" height="6" rx="3" fill="#ffffff" fill-opacity="0.3"/>
+
+  <!-- Fenêtre applicative schématique sur le bureau -->
+  <rect x="45" y="28" width="150" height="74" rx="6" fill="#1b1b1b" stroke="#ffffff" stroke-width="0.9" stroke-opacity="0.25"/>
+  <rect x="45" y="28" width="150" height="13" rx="4" fill="#242424"/>
+  <rect x="54" y="32.5" width="24" height="4" rx="2" fill="#ffffff" fill-opacity="0.3"/>
+  <!-- Boutons de gestion de la fenêtre à droite -->
+  <circle cx="170" cy="34.5" r="2.5" fill="#ffffff" fill-opacity="0.4"/>
+  <circle cx="178" cy="34.5" r="2.5" fill="#ffffff" fill-opacity="0.4"/>
+  <circle cx="186" cy="34.5" r="2.5" fill="#ffffff" fill-opacity="0.4"/>
+  
+  <!-- Lignes schématiques dans la fenêtre -->
+  <rect x="56" y="49" width="36" height="5" rx="2" fill="#ffffff" fill-opacity="0.5"/>
+  <rect x="56" y="60" width="80" height="3" rx="1.5" fill="#ffffff" fill-opacity="0.2"/>
+  <rect x="56" y="68" width="110" height="3" rx="1.5" fill="#ffffff" fill-opacity="0.15"/>
+  <rect x="56" y="76" width="60" height="3" rx="1.5" fill="#ffffff" fill-opacity="0.15"/>
+
+  <!-- Dock flottant centré avec grille 9 points GNOME -->
+  <rect x="70" y="115" width="100" height="17" rx="8.5" fill="#222222" stroke="#ffffff" stroke-width="1" stroke-opacity="0.6"/>
+  <g transform="translate(77, 119.5)">
+    <circle cx="2" cy="2" r="1.1" fill="#ffffff"/>
+    <circle cx="5" cy="2" r="1.1" fill="#ffffff"/>
+    <circle cx="8" cy="2" r="1.1" fill="#ffffff"/>
+    <circle cx="2" cy="5" r="1.1" fill="#ffffff"/>
+    <circle cx="5" cy="5" r="1.1" fill="#ffffff"/>
+    <circle cx="8" cy="5" r="1.1" fill="#ffffff"/>
+    <circle cx="2" cy="8" r="1.1" fill="#ffffff"/>
+    <circle cx="5" cy="8" r="1.1" fill="#ffffff"/>
+    <circle cx="8" cy="8" r="1.1" fill="#ffffff"/>
+  </g>
+  <circle cx="98" cy="123.5" r="4" fill="#ffffff" fill-opacity="0.85"/>
+  <circle cx="114" cy="123.5" r="4" fill="#ffffff" fill-opacity="0.6"/>
+  <circle cx="130" cy="123.5" r="4" fill="#ffffff" fill-opacity="0.75"/>
+  <circle cx="146" cy="123.5" r="4" fill="#ffffff" fill-opacity="0.6"/>
+  <circle cx="160" cy="123.5" r="4" fill="#ffffff" fill-opacity="0.85"/>
+</svg>

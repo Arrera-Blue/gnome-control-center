@@ -10,75 +10,408 @@ template $CcDockPanel: $CcPanel {
       child: Adw.PreferencesPage preferences_page {
         Adw.PreferencesGroup {
           title: _("Saveurs du bureau");
-          description: _("Sélectionnez et appliquez une disposition prédéfinie pour le bureau Arrera Blue.");
+          description: _("Cliquez sur une disposition pour l'appliquer à votre bureau Arrera Blue.");
 
-          Adw.ActionRow flavor_default_row {
-            title: _("Arrera par défaut");
-            subtitle: _("Dock en bas centré à masquage auto, barre supérieure standard et menu complet");
-            icon-name: "preferences-desktop-display-symbolic";
+          Grid {
+            column-homogeneous: true;
+            column-spacing: 16;
+            row-spacing: 16;
+            hexpand: true;
+            margin-top: 12;
 
-            [suffix]
-            Button {
-              label: _("Appliquer");
-              valign: center;
-              clicked => $on_apply_flavor_default_clicked(template);
-              styles ["suggested-action"]
+            // 1. Arrera par défaut
+            Box card_default {
+              orientation: vertical;
+              styles ["card", "flavor-card"]
+              layout {
+                column: 0;
+                row: 0;
+              }
+
+              Button {
+                clicked => $on_apply_flavor_default_clicked(template);
+                styles ["flat"]
+                margin-start: 8;
+                margin-end: 8;
+                margin-top: 8;
+                margin-bottom: 4;
+                tooltip-text: _("Cliquer pour appliquer cette disposition");
+
+                child: Box {
+                  styles ["frame"]
+                  overflow: hidden;
+
+                  Picture {
+                    can-shrink: true;
+                    content-fit: contain;
+                    height-request: 130;
+                    file: "resource:///org/gnome/control-center/dock/assets/flavor-default.svg";
+                  }
+                };
+              }
+
+              Box {
+                orientation: horizontal;
+                halign: center;
+                margin-bottom: 8;
+                margin-top: 2;
+
+                MenuButton {
+                  styles ["flat"]
+                  valign: center;
+
+                  child: Box {
+                    orientation: horizontal;
+                    spacing: 6;
+
+                    Image {
+                      icon-name: "dialog-information-symbolic";
+                    }
+
+                    Label {
+                      label: _("Description");
+                    }
+                  };
+
+                  popover: Popover {
+                    Box {
+                      orientation: vertical;
+                      spacing: 6;
+                      margin-top: 12;
+                      margin-bottom: 12;
+                      margin-start: 12;
+                      margin-end: 12;
+
+                      Label {
+                        label: _("Arrera par défaut");
+                        styles ["heading"]
+                      }
+
+                      Label {
+                        label: _("Dock en bas centré à masquage auto, barre supérieure standard et menu d'applications complet.");
+                        wrap: true;
+                        max-width-chars: 30;
+                      }
+                    }
+                  };
+                }
+              }
             }
-          }
 
-          Adw.ActionRow flavor_noappmenu_row {
-            title: _("Menu d'application GNOME");
-            subtitle: _("Disposition Arrera par défaut avec la grille d'applications native de GNOME");
-            icon-name: "view-app-grid-symbolic";
+            // 2. Menu d'application GNOME
+            Box card_noappmenu {
+              orientation: vertical;
+              styles ["card", "flavor-card"]
+              layout {
+                column: 1;
+                row: 0;
+              }
 
-            [suffix]
-            Button {
-              label: _("Appliquer");
-              valign: center;
-              clicked => $on_apply_flavor_noappmenu_clicked(template);
-              styles ["suggested-action"]
+              Button {
+                clicked => $on_apply_flavor_noappmenu_clicked(template);
+                styles ["flat"]
+                margin-start: 8;
+                margin-end: 8;
+                margin-top: 8;
+                margin-bottom: 4;
+                tooltip-text: _("Cliquer pour appliquer cette disposition");
+
+                child: Box {
+                  styles ["frame"]
+                  overflow: hidden;
+
+                  Picture {
+                    can-shrink: true;
+                    content-fit: contain;
+                    height-request: 130;
+                    file: "resource:///org/gnome/control-center/dock/assets/flavor-noappmenu.svg";
+                  }
+                };
+              }
+
+              Box {
+                orientation: horizontal;
+                halign: center;
+                margin-bottom: 8;
+                margin-top: 2;
+
+                MenuButton {
+                  styles ["flat"]
+                  valign: center;
+
+                  child: Box {
+                    orientation: horizontal;
+                    spacing: 6;
+
+                    Image {
+                      icon-name: "dialog-information-symbolic";
+                    }
+
+                    Label {
+                      label: _("Description");
+                    }
+                  };
+
+                  popover: Popover {
+                    Box {
+                      orientation: vertical;
+                      spacing: 6;
+                      margin-top: 12;
+                      margin-bottom: 12;
+                      margin-start: 12;
+                      margin-end: 12;
+
+                      Label {
+                        label: _("Menu d'application GNOME");
+                        styles ["heading"]
+                      }
+
+                      Label {
+                        label: _("Disposition Arrera par défaut avec la vue et grille d'applications native de GNOME.");
+                        wrap: true;
+                        max-width-chars: 30;
+                      }
+                    }
+                  };
+                }
+              }
             }
-          }
 
-          Adw.ActionRow flavor_windows_row {
-            title: _("Disposition Windows 10/11");
-            subtitle: _("Barre des tâches permanente en bas, menu compact en bas à gauche et barre supérieure masquée");
-            icon-name: "computer-symbolic";
+            // 3. Disposition Windows 10/11
+            Box card_windows {
+              orientation: vertical;
+              styles ["card", "flavor-card"]
+              layout {
+                column: 0;
+                row: 1;
+              }
 
-            [suffix]
-            Button {
-              label: _("Appliquer");
-              valign: center;
-              clicked => $on_apply_flavor_windows_clicked(template);
-              styles ["suggested-action"]
+              Button {
+                clicked => $on_apply_flavor_windows_clicked(template);
+                styles ["flat"]
+                margin-start: 8;
+                margin-end: 8;
+                margin-top: 8;
+                margin-bottom: 4;
+                tooltip-text: _("Cliquer pour appliquer cette disposition");
+
+                child: Box {
+                  styles ["frame"]
+                  overflow: hidden;
+
+                  Picture {
+                    can-shrink: true;
+                    content-fit: contain;
+                    height-request: 130;
+                    file: "resource:///org/gnome/control-center/dock/assets/flavor-windows.svg";
+                  }
+                };
+              }
+
+              Box {
+                orientation: horizontal;
+                halign: center;
+                margin-bottom: 8;
+                margin-top: 2;
+
+                MenuButton {
+                  styles ["flat"]
+                  valign: center;
+
+                  child: Box {
+                    orientation: horizontal;
+                    spacing: 6;
+
+                    Image {
+                      icon-name: "dialog-information-symbolic";
+                    }
+
+                    Label {
+                      label: _("Description");
+                    }
+                  };
+
+                  popover: Popover {
+                    Box {
+                      orientation: vertical;
+                      spacing: 6;
+                      margin-top: 12;
+                      margin-bottom: 12;
+                      margin-start: 12;
+                      margin-end: 12;
+
+                      Label {
+                        label: _("Disposition Windows 10/11");
+                        styles ["heading"]
+                      }
+
+                      Label {
+                        label: _("Barre des tâches permanente en bas pleine largeur, menu compact en bas à gauche et barre supérieure masquée.");
+                        wrap: true;
+                        max-width-chars: 30;
+                      }
+                    }
+                  };
+                }
+              }
             }
-          }
 
-          Adw.ActionRow flavor_windows_activity_row {
-            title: _("Disposition Windows 10/11 avec activity button");
-            subtitle: _("Barre des tâches permanente en bas avec le bouton Activités Arrera intégré");
-            icon-name: "computer-symbolic";
+            // 4. Disposition Windows 10/11 avec activity button
+            Box card_windows_activity {
+              orientation: vertical;
+              styles ["card", "flavor-card"]
+              layout {
+                column: 1;
+                row: 1;
+              }
 
-            [suffix]
-            Button {
-              label: _("Appliquer");
-              valign: center;
-              clicked => $on_apply_flavor_windows_activity_clicked(template);
-              styles ["suggested-action"]
+              Button {
+                clicked => $on_apply_flavor_windows_activity_clicked(template);
+                styles ["flat"]
+                margin-start: 8;
+                margin-end: 8;
+                margin-top: 8;
+                margin-bottom: 4;
+                tooltip-text: _("Cliquer pour appliquer cette disposition");
+
+                child: Box {
+                  styles ["frame"]
+                  overflow: hidden;
+
+                  Picture {
+                    can-shrink: true;
+                    content-fit: contain;
+                    height-request: 130;
+                    file: "resource:///org/gnome/control-center/dock/assets/flavor-windows-activity.svg";
+                  }
+                };
+              }
+
+              Box {
+                orientation: horizontal;
+                halign: center;
+                margin-bottom: 8;
+                margin-top: 2;
+
+                MenuButton {
+                  styles ["flat"]
+                  valign: center;
+
+                  child: Box {
+                    orientation: horizontal;
+                    spacing: 6;
+
+                    Image {
+                      icon-name: "dialog-information-symbolic";
+                    }
+
+                    Label {
+                      label: _("Description");
+                    }
+                  };
+
+                  popover: Popover {
+                    Box {
+                      orientation: vertical;
+                      spacing: 6;
+                      margin-top: 12;
+                      margin-bottom: 12;
+                      margin-start: 12;
+                      margin-end: 12;
+
+                      Label {
+                        label: _("Disposition Windows 10/11 avec activity button");
+                        styles ["heading"]
+                      }
+
+                      Label {
+                        label: _("Barre des tâches permanente en bas avec le bouton Activités Arrera intégré et menu compact.");
+                        wrap: true;
+                        max-width-chars: 30;
+                      }
+                    }
+                  };
+                }
+              }
             }
-          }
 
-          Adw.ActionRow flavor_nextstep_row {
-            title: _("Bureau NeXTStep");
-            subtitle: _("Inspiré de NeXTSTEP : dock à tuiles détachées à droite, contrôles intégrés et barre supérieure masquée");
-            icon-name: "user-desktop-symbolic";
+            // 5. Bureau NeXTStep
+            Box card_nextstep {
+              orientation: vertical;
+              styles ["card", "flavor-card"]
+              layout {
+                column: 0;
+                row: 2;
+              }
 
-            [suffix]
-            Button {
-              label: _("Appliquer");
-              valign: center;
-              clicked => $on_apply_flavor_nextstep_clicked(template);
-              styles ["suggested-action"]
+              Button {
+                clicked => $on_apply_flavor_nextstep_clicked(template);
+                styles ["flat"]
+                margin-start: 8;
+                margin-end: 8;
+                margin-top: 8;
+                margin-bottom: 4;
+                tooltip-text: _("Cliquer pour appliquer cette disposition");
+
+                child: Box {
+                  styles ["frame"]
+                  overflow: hidden;
+
+                  Picture {
+                    can-shrink: true;
+                    content-fit: contain;
+                    height-request: 130;
+                    file: "resource:///org/gnome/control-center/dock/assets/flavor-nextstep.svg";
+                  }
+                };
+              }
+
+              Box {
+                orientation: horizontal;
+                halign: center;
+                margin-bottom: 8;
+                margin-top: 2;
+
+                MenuButton {
+                  styles ["flat"]
+                  valign: center;
+
+                  child: Box {
+                    orientation: horizontal;
+                    spacing: 6;
+
+                    Image {
+                      icon-name: "dialog-information-symbolic";
+                    }
+
+                    Label {
+                      label: _("Description");
+                    }
+                  };
+
+                  popover: Popover {
+                    Box {
+                      orientation: vertical;
+                      spacing: 6;
+                      margin-top: 12;
+                      margin-bottom: 12;
+                      margin-start: 12;
+                      margin-end: 12;
+
+                      Label {
+                        label: _("Bureau NeXTStep");
+                        styles ["heading"]
+                      }
+
+                      Label {
+                        label: _("Inspiré de NeXTSTEP : dock à tuiles détachées à droite, contrôles intégrés, barre supérieure masquée et menu compact.");
+                        wrap: true;
+                        max-width-chars: 30;
+                      }
+                    }
+                  };
+                }
+              }
             }
           }
         }

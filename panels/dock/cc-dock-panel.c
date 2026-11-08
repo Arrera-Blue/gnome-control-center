@@ -19,6 +19,12 @@ struct _CcDockPanel
 
   AdwToastOverlay    *toast_overlay;
   AdwPreferencesPage *preferences_page;
+
+  GtkWidget          *card_default;
+  GtkWidget          *card_noappmenu;
+  GtkWidget          *card_windows;
+  GtkWidget          *card_windows_activity;
+  GtkWidget          *card_nextstep;
 };
 
 CC_PANEL_REGISTER (CcDockPanel, cc_dock_panel)
@@ -326,6 +332,165 @@ apply_nextstep_dock_settings (CcDockPanel *self)
   set_bool_if_valid (self->dock_settings, "disable-overview-at-startup", TRUE);
 }
 
+typedef enum
+{
+  FLAVOR_UNKNOWN = 0,
+  FLAVOR_DEFAULT,
+  FLAVOR_NOAPPMENU,
+  FLAVOR_WINDOWS,
+  FLAVOR_WINDOWS_ACTIVITY,
+  FLAVOR_NEXTSTEP
+} FlavorId;
+
+static void
+load_custom_css (void)
+{
+  static gboolean loaded = FALSE;
+  GtkCssProvider *provider;
+  GdkDisplay *display;
+
+  if (loaded)
+    return;
+
+  provider = gtk_css_provider_new ();
+  gtk_css_provider_load_from_string (
+    provider,
+    ".flavor-card {\n"
+    "  border-radius: 12px;\n"
+    "  border: 2px solid transparent;\n"
+    "  transition: border-color 200ms ease, box-shadow 200ms ease;\n"
+    "}\n"
+    ".flavor-card:hover:not(.flavor-selected) {\n"
+    "  border-color: alpha(@accent_color, 0.35);\n"
+    "}\n"
+    ".flavor-card.flavor-selected {\n"
+    "  border-color: @accent_color;\n"
+    "  box-shadow: 0 0 0 1px @accent_color, 0 0 16px alpha(@accent_color, 0.45);\n"
+    "}\n"
+  );
+
+  display = gdk_display_get_default ();
+  if (display)
+    gtk_style_context_add_provider_for_display (
+      display,
+      GTK_STYLE_PROVIDER (provider),
+      GTK_STYLE_PROVIDER_PRIORITY_APPLICATION
+    );
+
+  g_object_unref (provider);
+  loaded = TRUE;
+}
+
+static gboolean
+is_extension_enabled (GSettings *shell_settings, const gchar *uuid)
+{
+  g_auto(GStrv) enabled = NULL;
+
+  if (!shell_settings)
+    return FALSE;
+
+  enabled = g_settings_get_strv (shell_settings, "enabled-extensions");
+  if (!enabled)
+    return FALSE;
+
+  for (guint i = 0; enabled[i]; i++)
+    {
+      if (g_strcmp0 (enabled[i], uuid) == 0)
+        return TRUE;
+    }
+
+  return FALSE;
+}
+
+static FlavorId
+detect_current_flavor (CcDockPanel *self)
+{
+  g_autofree gchar *position = NULL;
+  gboolean island_mode = FALSE;
+  gboolean hide_top_bar = FALSE;
+  gboolean always_bar_mode = FALSE;
+  gboolean show_activities = FALSE;
+  gboolean appmenu_enabled = FALSE;
+
+  if (self->dock_settings)
+    {
+      GSettingsSchema *schema = NULL;
+      g_object_get (self->dock_settings, "settings-schema", &schema, NULL);
+      if (schema)
+        {
+          if (g_settings_schema_has_key (schema, "position"))
+            position = g_settings_get_string (self->dock_settings, "position");
+          if (g_settings_schema_has_key (schema, "island-mode"))
+            island_mode = g_settings_get_boolean (self->dock_settings, "island-mode");
+          if (g_settings_schema_has_key (schema, "always-bar-mode"))
+            always_bar_mode = g_settings_get_boolean (self->dock_settings, "always-bar-mode");
+          if (g_settings_schema_has_key (schema, "show-activities-button"))
+            show_activities = g_settings_get_boolean (self->dock_settings, "show-activities-button");
+          g_settings_schema_unref (schema);
+        }
+    }
+
+  if (self->topbar_settings)
+    {
+      GSettingsSchema *schema = NULL;
+      g_object_get (self->topbar_settings, "settings-schema", &schema, NULL);
+      if (schema)
+        {
+          if (g_settings_schema_has_key (schema, "hide-top-bar"))
+            hide_top_bar = g_settings_get_boolean (self->topbar_settings, "hide-top-bar");
+          g_settings_schema_unref (schema);
+        }
+    }
+
+  if (island_mode || g_strcmp0 (position, "right") == 0)
+    return FLAVOR_NEXTSTEP;
+
+  if (hide_top_bar || always_bar_mode)
+    {
+      if (show_activities)
+        return FLAVOR_WINDOWS_ACTIVITY;
+      else
+        return FLAVOR_WINDOWS;
+    }
+
+  appmenu_enabled = is_extension_enabled (self->shell_settings, "app-menu@linux.arrera-software.fr");
+  if (!appmenu_enabled)
+    return FLAVOR_NOAPPMENU;
+
+  return FLAVOR_DEFAULT;
+}
+
+static void
+update_selected_flavor_highlight (CcDockPanel *self)
+{
+  FlavorId current;
+  struct {
+    GtkWidget *widget;
+    FlavorId   flavor;
+  } cards[] = {
+    { self->card_default,          FLAVOR_DEFAULT },
+    { self->card_noappmenu,        FLAVOR_NOAPPMENU },
+    { self->card_windows,          FLAVOR_WINDOWS },
+    { self->card_windows_activity, FLAVOR_WINDOWS_ACTIVITY },
+    { self->card_nextstep,         FLAVOR_NEXTSTEP },
+  };
+
+  g_assert (CC_IS_DOCK_PANEL (self));
+
+  current = detect_current_flavor (self);
+
+  for (gsize i = 0; i < G_N_ELEMENTS (cards); i++)
+    {
+      if (!cards[i].widget)
+        continue;
+
+      if (cards[i].flavor == current)
+        gtk_widget_add_css_class (cards[i].widget, "flavor-selected");
+      else
+        gtk_widget_remove_css_class (cards[i].widget, "flavor-selected");
+    }
+}
+
 static void
 on_apply_flavor_default_clicked (CcDockPanel *self)
 {
@@ -348,7 +513,10 @@ on_apply_flavor_default_clicked (CcDockPanel *self)
   /* 5. Synchronisation des extensions Shell */
   reload_extensions_async (TRUE);
 
-  /* 6. Notification Toast */
+  /* 6. Mise à jour de la mise en valeur de la saveur sélectionnée */
+  update_selected_flavor_highlight (self);
+
+  /* 7. Notification Toast */
   if (self->toast_overlay)
     {
       adw_toast_overlay_add_toast (self->toast_overlay,
@@ -378,7 +546,10 @@ on_apply_flavor_noappmenu_clicked (CcDockPanel *self)
   /* 5. Synchronisation des extensions Shell */
   reload_extensions_async (FALSE);
 
-  /* 6. Notification Toast */
+  /* 6. Mise à jour de la mise en valeur de la saveur sélectionnée */
+  update_selected_flavor_highlight (self);
+
+  /* 7. Notification Toast */
   if (self->toast_overlay)
     {
       adw_toast_overlay_add_toast (self->toast_overlay,
@@ -408,7 +579,10 @@ on_apply_flavor_windows_clicked (CcDockPanel *self)
   /* 5. Synchronisation des extensions Shell */
   reload_extensions_async (TRUE);
 
-  /* 6. Notification Toast */
+  /* 6. Mise à jour de la mise en valeur de la saveur sélectionnée */
+  update_selected_flavor_highlight (self);
+
+  /* 7. Notification Toast */
   if (self->toast_overlay)
     {
       adw_toast_overlay_add_toast (self->toast_overlay,
@@ -440,7 +614,10 @@ on_apply_flavor_windows_activity_clicked (CcDockPanel *self)
   /* 5. Synchronisation des extensions Shell */
   reload_extensions_async (TRUE);
 
-  /* 6. Notification Toast */
+  /* 6. Mise à jour de la mise en valeur de la saveur sélectionnée */
+  update_selected_flavor_highlight (self);
+
+  /* 7. Notification Toast */
   if (self->toast_overlay)
     {
       adw_toast_overlay_add_toast (self->toast_overlay,
@@ -470,7 +647,10 @@ on_apply_flavor_nextstep_clicked (CcDockPanel *self)
   /* 5. Synchronisation des extensions Shell */
   reload_extensions_async (TRUE);
 
-  /* 6. Notification Toast */
+  /* 6. Mise à jour de la mise en valeur de la saveur sélectionnée */
+  update_selected_flavor_highlight (self);
+
+  /* 7. Notification Toast */
   if (self->toast_overlay)
     {
       adw_toast_overlay_add_toast (self->toast_overlay,
@@ -503,6 +683,12 @@ cc_dock_panel_class_init (CcDockPanelClass *klass)
 
   gtk_widget_class_bind_template_child (widget_class, CcDockPanel, toast_overlay);
   gtk_widget_class_bind_template_child (widget_class, CcDockPanel, preferences_page);
+
+  gtk_widget_class_bind_template_child (widget_class, CcDockPanel, card_default);
+  gtk_widget_class_bind_template_child (widget_class, CcDockPanel, card_noappmenu);
+  gtk_widget_class_bind_template_child (widget_class, CcDockPanel, card_windows);
+  gtk_widget_class_bind_template_child (widget_class, CcDockPanel, card_windows_activity);
+  gtk_widget_class_bind_template_child (widget_class, CcDockPanel, card_nextstep);
 
   gtk_widget_class_bind_template_callback (widget_class, on_apply_flavor_default_clicked);
   gtk_widget_class_bind_template_callback (widget_class, on_apply_flavor_noappmenu_clicked);
@@ -545,8 +731,19 @@ cc_dock_panel_init (CcDockPanel *self)
   g_resources_register (cc_dock_get_resource ());
   gtk_widget_init_template (GTK_WIDGET (self));
 
+  load_custom_css ();
+
   self->shell_settings = load_settings_safely ("org.gnome.shell", NULL);
   self->dock_settings = load_settings_safely ("org.gnome.shell.extensions.dock", "dock@linux.arrera-software.fr");
   self->topbar_settings = load_settings_safely ("org.gnome.shell.extensions.top-bar", "top-bar@linux.arrera-software.fr");
   self->appmenu_settings = load_settings_safely ("org.gnome.shell.extensions.app-menu", "app-menu@linux.arrera-software.fr");
+
+  update_selected_flavor_highlight (self);
+
+  if (self->dock_settings)
+    g_signal_connect_swapped (self->dock_settings, "changed", G_CALLBACK (update_selected_flavor_highlight), self);
+  if (self->topbar_settings)
+    g_signal_connect_swapped (self->topbar_settings, "changed", G_CALLBACK (update_selected_flavor_highlight), self);
+  if (self->shell_settings)
+    g_signal_connect_swapped (self->shell_settings, "changed::enabled-extensions", G_CALLBACK (update_selected_flavor_highlight), self);
 }
