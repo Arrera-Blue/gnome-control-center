@@ -167,6 +167,29 @@ apply_extensions_config (GSettings *shell_settings, const ExtensionConfig *confi
   g_ptr_array_free (new_disabled, TRUE);
 }
 
+/* Réinitialise proprement les extensions GNOME Shell pour éviter les incohérences d'acteurs */
+static void
+reload_extensions_async (gboolean enable_app_menu)
+{
+  g_autofree gchar *cmd = g_strdup_printf (
+    "/usr/bin/bash -c '"
+    "gnome-extensions disable dock@linux.arrera-software.fr 2>/dev/null || true; "
+    "gnome-extensions disable top-bar@linux.arrera-software.fr 2>/dev/null || true; "
+    "gnome-extensions disable appindicatorsupport@rgcjonas.gmail.com 2>/dev/null || true; "
+    "gnome-extensions disable GPaste@gnome-shell-extensions.gnome.org 2>/dev/null || true; "
+    "sleep 0.25; "
+    "gnome-extensions enable top-bar@linux.arrera-software.fr 2>/dev/null || true; "
+    "gnome-extensions enable dock@linux.arrera-software.fr 2>/dev/null || true; "
+    "gnome-extensions enable appindicatorsupport@rgcjonas.gmail.com 2>/dev/null || true; "
+    "gnome-extensions enable GPaste@gnome-shell-extensions.gnome.org 2>/dev/null || true; "
+    "%s'",
+    enable_app_menu
+      ? "gnome-extensions enable app-menu@linux.arrera-software.fr 2>/dev/null || true;"
+      : "gnome-extensions disable app-menu@linux.arrera-software.fr 2>/dev/null || true;"
+  );
+  g_spawn_command_line_async (cmd, NULL);
+}
+
 /* Réglages par défaut (Saveurs 1 et 2) */
 static void
 apply_default_dock_settings (CcDockPanel *self)
@@ -322,7 +345,10 @@ on_apply_flavor_default_clicked (CcDockPanel *self)
   /* 4. Arrera App Menu */
   apply_default_appmenu_settings (self);
 
-  /* 5. Notification Toast */
+  /* 5. Synchronisation des extensions Shell */
+  reload_extensions_async (TRUE);
+
+  /* 6. Notification Toast */
   if (self->toast_overlay)
     {
       adw_toast_overlay_add_toast (self->toast_overlay,
@@ -349,7 +375,10 @@ on_apply_flavor_noappmenu_clicked (CcDockPanel *self)
   /* 4. Arrera App Menu */
   apply_default_appmenu_settings (self);
 
-  /* 5. Notification Toast */
+  /* 5. Synchronisation des extensions Shell */
+  reload_extensions_async (FALSE);
+
+  /* 6. Notification Toast */
   if (self->toast_overlay)
     {
       adw_toast_overlay_add_toast (self->toast_overlay,
@@ -376,7 +405,10 @@ on_apply_flavor_windows_clicked (CcDockPanel *self)
   /* 4. Arrera App Menu */
   apply_windows_appmenu_settings (self);
 
-  /* 5. Notification Toast */
+  /* 5. Synchronisation des extensions Shell */
+  reload_extensions_async (TRUE);
+
+  /* 6. Notification Toast */
   if (self->toast_overlay)
     {
       adw_toast_overlay_add_toast (self->toast_overlay,
@@ -405,7 +437,10 @@ on_apply_flavor_windows_activity_clicked (CcDockPanel *self)
   /* 4. Arrera App Menu */
   apply_windows_appmenu_settings (self);
 
-  /* 5. Notification Toast */
+  /* 5. Synchronisation des extensions Shell */
+  reload_extensions_async (TRUE);
+
+  /* 6. Notification Toast */
   if (self->toast_overlay)
     {
       adw_toast_overlay_add_toast (self->toast_overlay,
@@ -432,7 +467,10 @@ on_apply_flavor_nextstep_clicked (CcDockPanel *self)
   /* 4. Arrera App Menu */
   apply_windows_appmenu_settings (self);
 
-  /* 5. Notification Toast */
+  /* 5. Synchronisation des extensions Shell */
+  reload_extensions_async (TRUE);
+
+  /* 6. Notification Toast */
   if (self->toast_overlay)
     {
       adw_toast_overlay_add_toast (self->toast_overlay,

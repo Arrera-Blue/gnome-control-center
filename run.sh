@@ -47,6 +47,16 @@ if [ "$SCHEMA_COPIED" -eq 1 ]; then
     glib-compile-schemas "$HOME/.local/share/glib-2.0/schemas"
 fi
 
+# Correction de sécurité pour le bouton d'activités dans topBar.js (restauration du conteneur parent)
+USER_TOPBAR="$HOME/.local/share/gnome-shell/extensions/top-bar@linux.arrera-software.fr"
+if [ ! -d "$USER_TOPBAR" ] && [ -d "/usr/share/gnome-shell/extensions/top-bar@linux.arrera-software.fr" ]; then
+    mkdir -p "$HOME/.local/share/gnome-shell/extensions" 2>/dev/null || true
+    cp -r "/usr/share/gnome-shell/extensions/top-bar@linux.arrera-software.fr" "$USER_TOPBAR" 2>/dev/null || true
+fi
+if [ -f "$USER_TOPBAR/topBar.js" ]; then
+    sed -i 's/if (this._activitiesButton)\s*this._activitiesButton.visible = true;/if (this._activitiesButton) { this._activitiesButton.visible = true; if (this._activitiesButton.container) this._activitiesButton.container.visible = true; }/' "$USER_TOPBAR/topBar.js" 2>/dev/null || true
+fi
+
 echo "🚀 Lancement de GNOME Settings..."
 if [ -n "$1" ]; then
     echo "→ Paramètre : $1"
