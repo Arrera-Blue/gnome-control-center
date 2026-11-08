@@ -6,79 +6,83 @@ template $CcDockPanel: $CcPanel {
     [top]
     Adw.HeaderBar {}
 
-    [top]
-    Adw.Banner banner {
-      title: _("L'extension Arrera Dock ou son schéma GSettings n'est pas installée sur le système.");
-      revealed: false;
-    }
+    content: Adw.ToastOverlay toast_overlay {
+      child: Adw.PreferencesPage preferences_page {
+        Adw.PreferencesGroup {
+          title: _("Saveurs du bureau");
+          description: _("Sélectionnez et appliquez une disposition prédéfinie pour le bureau Arrera Blue.");
 
-    content: Adw.PreferencesPage preferences_page {
-      Adw.PreferencesGroup {
-        title: _("Comportement");
+          Adw.ActionRow flavor_default_row {
+            title: _("Arrera par défaut");
+            subtitle: _("Dock en bas centré à masquage auto, barre supérieure standard et menu complet");
+            icon-name: "preferences-desktop-display-symbolic";
 
-        Adw.SwitchRow autohide_row {
-          title: _("_Masquer automatiquement le dock");
-          subtitle: _("Révèle le dock lorsque le curseur touche le bord inférieur de l'écran");
-          use-underline: true;
+            [suffix]
+            Button {
+              label: _("Appliquer");
+              valign: center;
+              clicked => $on_apply_flavor_default_clicked(template);
+              styles ["suggested-action"]
+            }
+          }
+
+          Adw.ActionRow flavor_noappmenu_row {
+            title: _("Menu d'application GNOME");
+            subtitle: _("Disposition Arrera par défaut avec la grille d'applications native de GNOME");
+            icon-name: "view-app-grid-symbolic";
+
+            [suffix]
+            Button {
+              label: _("Appliquer");
+              valign: center;
+              clicked => $on_apply_flavor_noappmenu_clicked(template);
+              styles ["suggested-action"]
+            }
+          }
+
+          Adw.ActionRow flavor_windows_row {
+            title: _("Disposition Windows 10/11");
+            subtitle: _("Barre des tâches permanente en bas, menu compact en bas à gauche et barre supérieure masquée");
+            icon-name: "computer-symbolic";
+
+            [suffix]
+            Button {
+              label: _("Appliquer");
+              valign: center;
+              clicked => $on_apply_flavor_windows_clicked(template);
+              styles ["suggested-action"]
+            }
+          }
+
+          Adw.ActionRow flavor_windows_activity_row {
+            title: _("Disposition Windows 10/11 avec activity button");
+            subtitle: _("Barre des tâches permanente en bas avec le bouton Activités Arrera intégré");
+            icon-name: "computer-symbolic";
+
+            [suffix]
+            Button {
+              label: _("Appliquer");
+              valign: center;
+              clicked => $on_apply_flavor_windows_activity_clicked(template);
+              styles ["suggested-action"]
+            }
+          }
+
+          Adw.ActionRow flavor_nextstep_row {
+            title: _("Bureau NeXTStep");
+            subtitle: _("Inspiré de NeXTSTEP : dock à tuiles détachées à droite, contrôles intégrés et barre supérieure masquée");
+            icon-name: "user-desktop-symbolic";
+
+            [suffix]
+            Button {
+              label: _("Appliquer");
+              valign: center;
+              clicked => $on_apply_flavor_nextstep_clicked(template);
+              styles ["suggested-action"]
+            }
+          }
         }
-
-        Adw.SwitchRow wave_row {
-          title: _("Effet d'a_grandissement en vague");
-          subtitle: _("Agrandit dynamiquement les icônes au survol");
-          use-underline: true;
-        }
-
-        Adw.SwitchRow super_key_row {
-          title: _("Ouvrir le lanceur avec la touche _Super");
-          subtitle: _("Désactiver pour rétablir la vue d'ensemble des activités de GNOME");
-          use-underline: true;
-        }
-      }
-
-      Adw.PreferencesGroup {
-        title: _("Apparence du dock");
-
-        Adw.ComboRow position_row {
-          title: _("_Position à l'écran");
-          use-underline: true;
-          notify::selected => $position_changed_cb(template);
-
-          model: StringList {
-            strings [
-              _("En bas"),
-              _("À gauche"),
-              _("À droite"),
-            ]
-          };
-        }
-
-        Adw.ComboRow size_row {
-          title: _("_Taille des icônes");
-          use-underline: true;
-          notify::selected => $size_changed_cb(template);
-
-          model: StringList {
-            strings [
-              _("Petite (28 px)"),
-              _("Moyenne (36 px)"),
-              _("Grande (48 px)"),
-            ]
-          };
-        }
-
-        Adw.ComboRow theme_row {
-          title: _("Style _visuel");
-          use-underline: true;
-          notify::selected => $theme_changed_cb(template);
-
-          model: StringList {
-            strings [
-              _("Material Expressive (fond teinté)"),
-              _("Noir avec contour coloré"),
-            ]
-          };
-        }
-      }
+      };
     };
   };
 }

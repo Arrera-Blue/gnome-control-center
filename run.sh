@@ -26,17 +26,24 @@ if [ -f "panels/dock/icons/scalable/org.gnome.Settings-dock-symbolic.svg" ]; the
     cp -u "panels/dock/icons/scalable/org.gnome.Settings-dock-symbolic.svg" "$HOME/.local/share/icons/hicolor/scalable/apps/" 2>/dev/null || true
 fi
 
-# Synchronisation et compilation du schéma GSettings pour Arrera Dock
-EXT_SCHEMA=""
-if [ -f "$HOME/.local/share/gnome-shell/extensions/dock@linux.arrera-software.fr/schemas/org.gnome.shell.extensions.dock.gschema.xml" ]; then
-    EXT_SCHEMA="$HOME/.local/share/gnome-shell/extensions/dock@linux.arrera-software.fr/schemas/org.gnome.shell.extensions.dock.gschema.xml"
-elif [ -f "$HOME/.local/share/gnome-shell/extensions/arrera-dock/schemas/org.gnome.shell.extensions.dock.gschema.xml" ]; then
-    EXT_SCHEMA="$HOME/.local/share/gnome-shell/extensions/arrera-dock/schemas/org.gnome.shell.extensions.dock.gschema.xml"
-fi
+# Synchronisation et compilation des schémas GSettings pour les extensions Arrera
+EXT_NAMES=("dock@linux.arrera-software.fr" "top-bar@linux.arrera-software.fr" "app-menu@linux.arrera-software.fr" "arrera-dock")
+SCHEMA_COPIED=0
 
-if [ -n "$EXT_SCHEMA" ]; then
-    mkdir -p "$HOME/.local/share/glib-2.0/schemas"
-    cp -u "$EXT_SCHEMA" "$HOME/.local/share/glib-2.0/schemas/"
+for ext in "${EXT_NAMES[@]}"; do
+    SCHEMA_PATH="$HOME/.local/share/gnome-shell/extensions/$ext/schemas"
+    if [ -d "$SCHEMA_PATH" ]; then
+        for xml in "$SCHEMA_PATH"/*.gschema.xml; do
+            if [ -f "$xml" ]; then
+                mkdir -p "$HOME/.local/share/glib-2.0/schemas"
+                cp -u "$xml" "$HOME/.local/share/glib-2.0/schemas/"
+                SCHEMA_COPIED=1
+            fi
+        done
+    fi
+done
+
+if [ "$SCHEMA_COPIED" -eq 1 ]; then
     glib-compile-schemas "$HOME/.local/share/glib-2.0/schemas"
 fi
 
