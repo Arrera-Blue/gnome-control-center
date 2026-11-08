@@ -404,7 +404,7 @@ template $CcDockPanel: $CcPanel {
                       }
 
                       Label {
-                        label: _("Inspiré de NeXTSTEP : dock à tuiles détachées à droite, contrôles intégrés, barre supérieure masquée et menu compact.");
+                        label: _("Inspiré de NeXTSTEP : dock à tuiles détachées à droite, contrôles intégrés et barre supérieure masquée.");
                         wrap: true;
                         max-width-chars: 30;
                       }
@@ -418,6 +418,11 @@ template $CcDockPanel: $CcPanel {
 
         Adw.PreferencesGroup {
           title: _("Paramètres du dock");
+
+          Adw.SwitchRow autohide_row {
+            title: _("Masquage automatique du dock");
+            subtitle: _("Masque automatiquement le dock lorsqu'une fenêtre le chevauche");
+          }
 
           Adw.ComboRow icon_size_row {
             title: _("Taille des icônes");
@@ -437,6 +442,57 @@ template $CcDockPanel: $CcPanel {
                 _("En bas"),
                 _("À gauche"),
                 _("À droite"),
+              ]
+            };
+          }
+        }
+
+        Adw.PreferencesGroup {
+          title: _("Couleurs et thèmes");
+
+          Adw.ComboRow dock_theme_row {
+            title: _("Thème du dock");
+            model: StringList {
+              strings [
+                _("Expressif (fond teinté)"),
+                _("Contour accentué"),
+                _("Standard GNOME"),
+                _("Noir"),
+                _("Blanc"),
+              ]
+            };
+          }
+
+          Adw.ComboRow topbar_theme_row {
+            title: _("Thème de la barre supérieure");
+            model: StringList {
+              strings [
+                _("Standard GNOME"),
+                _("Transparent (invisible)"),
+                _("Sombre teinté"),
+                _("Clair teinté"),
+              ]
+            };
+          }
+
+          Adw.ComboRow appmenu_theme_row {
+            title: _("Thème du menu d'applications");
+            model: StringList {
+              strings [
+                _("Expressif (fond teinté)"),
+                _("Contour accentué"),
+                _("Standard GNOME"),
+              ]
+            };
+          }
+
+          Adw.ComboRow logo_color_row {
+            title: _("Couleur du logo Arrera");
+            model: StringList {
+              strings [
+                _("Couleur d'accentuation"),
+                _("Blanc"),
+                _("Noir"),
               ]
             };
           }

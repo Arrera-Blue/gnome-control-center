@@ -8,6 +8,16 @@
 #include <adwaita.h>
 #include <glib/gi18n.h>
 
+typedef enum
+{
+  FLAVOR_UNKNOWN = 0,
+  FLAVOR_DEFAULT,
+  FLAVOR_NOAPPMENU,
+  FLAVOR_WINDOWS,
+  FLAVOR_WINDOWS_ACTIVITY,
+  FLAVOR_NEXTSTEP
+} FlavorId;
+
 struct _CcDockPanel
 {
   CcPanel             parent_instance;
@@ -16,6 +26,8 @@ struct _CcDockPanel
   GSettings          *dock_settings;
   GSettings          *topbar_settings;
   GSettings          *appmenu_settings;
+
+  FlavorId            current_flavor;
 
   AdwToastOverlay    *toast_overlay;
   AdwPreferencesPage *preferences_page;
@@ -26,8 +38,14 @@ struct _CcDockPanel
   GtkWidget          *card_windows_activity;
   GtkWidget          *card_nextstep;
 
+  AdwSwitchRow       *autohide_row;
   AdwComboRow        *icon_size_row;
   AdwComboRow        *position_row;
+
+  AdwComboRow        *dock_theme_row;
+  AdwComboRow        *topbar_theme_row;
+  AdwComboRow        *appmenu_theme_row;
+  AdwComboRow        *logo_color_row;
 };
 
 CC_PANEL_REGISTER (CcDockPanel, cc_dock_panel)
@@ -335,16 +353,6 @@ apply_nextstep_dock_settings (CcDockPanel *self)
   set_bool_if_valid (self->dock_settings, "disable-overview-at-startup", TRUE);
 }
 
-typedef enum
-{
-  FLAVOR_UNKNOWN = 0,
-  FLAVOR_DEFAULT,
-  FLAVOR_NOAPPMENU,
-  FLAVOR_WINDOWS,
-  FLAVOR_WINDOWS_ACTIVITY,
-  FLAVOR_NEXTSTEP
-} FlavorId;
-
 static void
 load_custom_css (void)
 {
@@ -445,7 +453,7 @@ detect_current_flavor (CcDockPanel *self)
         }
     }
 
-  if (island_mode || g_strcmp0 (position, "right") == 0)
+  if (island_mode)
     return FLAVOR_NEXTSTEP;
 
   if (hide_top_bar || always_bar_mode)
@@ -467,6 +475,10 @@ static void
 update_selected_flavor_highlight (CcDockPanel *self)
 {
   FlavorId current;
+  g_autofree gchar *position = NULL;
+  gboolean is_flavor_1_or_2;
+  gboolean can_autohide;
+
   struct {
     GtkWidget *widget;
     FlavorId   flavor;
@@ -480,7 +492,12 @@ update_selected_flavor_highlight (CcDockPanel *self)
 
   g_assert (CC_IS_DOCK_PANEL (self));
 
-  current = detect_current_flavor (self);
+  if (self->current_flavor != FLAVOR_UNKNOWN)
+    current = self->current_flavor;
+  else
+    current = detect_current_flavor (self);
+
+  self->current_flavor = current;
 
   for (gsize i = 0; i < G_N_ELEMENTS (cards); i++)
     {
@@ -492,12 +509,45 @@ update_selected_flavor_highlight (CcDockPanel *self)
       else
         gtk_widget_remove_css_class (cards[i].widget, "flavor-selected");
     }
+
+  if (self->dock_settings)
+    position = g_settings_get_string (self->dock_settings, "position");
+
+  is_flavor_1_or_2 = (current == FLAVOR_DEFAULT || current == FLAVOR_NOAPPMENU);
+  /* Le masquage automatique est débloqué uniquement si on est en disposition 1 ou 2 avec le dock en bas */
+  can_autohide = is_flavor_1_or_2 && (g_strcmp0 (position, "bottom") == 0);
+
+  if (self->autohide_row)
+    {
+      gtk_widget_set_sensitive (GTK_WIDGET (self->autohide_row), can_autohide);
+      if (can_autohide)
+        adw_action_row_set_subtitle (ADW_ACTION_ROW (self->autohide_row),
+                                     _("Masque automatiquement le dock lorsqu'une fenêtre le chevauche"));
+      else if (!is_flavor_1_or_2)
+        adw_action_row_set_subtitle (ADW_ACTION_ROW (self->autohide_row),
+                                     _("Verrouillé : non disponible pour cette disposition"));
+      else
+        adw_action_row_set_subtitle (ADW_ACTION_ROW (self->autohide_row),
+                                     _("Verrouillé : disponible uniquement avec le dock en bas"));
+    }
+
+  if (self->position_row)
+    {
+      gtk_widget_set_sensitive (GTK_WIDGET (self->position_row), is_flavor_1_or_2);
+      if (!is_flavor_1_or_2)
+        adw_action_row_set_subtitle (ADW_ACTION_ROW (self->position_row),
+                                     _("Verrouillé : fixe pour cette disposition"));
+      else
+        adw_action_row_set_subtitle (ADW_ACTION_ROW (self->position_row), NULL);
+    }
 }
 
 static void
 on_apply_flavor_default_clicked (CcDockPanel *self)
 {
   g_assert (CC_IS_DOCK_PANEL (self));
+
+  self->current_flavor = FLAVOR_DEFAULT;
 
   /* 1. Extensions GNOME */
   apply_extensions_config (self->shell_settings,
@@ -532,6 +582,8 @@ on_apply_flavor_noappmenu_clicked (CcDockPanel *self)
 {
   g_assert (CC_IS_DOCK_PANEL (self));
 
+  self->current_flavor = FLAVOR_NOAPPMENU;
+
   /* 1. Extensions GNOME */
   apply_extensions_config (self->shell_settings,
                            flavor_noappmenu_extensions,
@@ -565,6 +617,8 @@ on_apply_flavor_windows_clicked (CcDockPanel *self)
 {
   g_assert (CC_IS_DOCK_PANEL (self));
 
+  self->current_flavor = FLAVOR_WINDOWS;
+
   /* 1. Extensions GNOME */
   apply_extensions_config (self->shell_settings,
                            flavor_default_extensions,
@@ -597,6 +651,8 @@ static void
 on_apply_flavor_windows_activity_clicked (CcDockPanel *self)
 {
   g_assert (CC_IS_DOCK_PANEL (self));
+
+  self->current_flavor = FLAVOR_WINDOWS_ACTIVITY;
 
   /* 1. Extensions GNOME */
   apply_extensions_config (self->shell_settings,
@@ -633,6 +689,8 @@ on_apply_flavor_nextstep_clicked (CcDockPanel *self)
 {
   g_assert (CC_IS_DOCK_PANEL (self));
 
+  self->current_flavor = FLAVOR_NEXTSTEP;
+
   /* 1. Extensions GNOME */
   apply_extensions_config (self->shell_settings,
                            flavor_default_extensions,
@@ -645,7 +703,7 @@ on_apply_flavor_nextstep_clicked (CcDockPanel *self)
   apply_windows_topbar_settings (self);
 
   /* 4. Arrera App Menu */
-  apply_windows_appmenu_settings (self);
+  apply_default_appmenu_settings (self);
 
   /* 5. Synchronisation des extensions Shell */
   reload_extensions_async (TRUE);
@@ -751,6 +809,211 @@ position_set_mapping (const GValue       *value,
   return g_variant_new_string (str);
 }
 
+static gboolean
+dock_theme_get_mapping (GValue   *value,
+                        GVariant *variant,
+                        gpointer  user_data)
+{
+  const gchar *str = g_variant_get_string (variant, NULL);
+  guint index = 0; /* default expressive */
+
+  if (g_strcmp0 (str, "expressive") == 0)
+    index = 0;
+  else if (g_strcmp0 (str, "black-outline") == 0)
+    index = 1;
+  else if (g_strcmp0 (str, "vanilla-gnome") == 0)
+    index = 2;
+  else if (g_strcmp0 (str, "black") == 0)
+    index = 3;
+  else if (g_strcmp0 (str, "white") == 0)
+    index = 4;
+
+  g_value_set_uint (value, index);
+  return TRUE;
+}
+
+static GVariant *
+dock_theme_set_mapping (const GValue       *value,
+                        const GVariantType *expected_type,
+                        gpointer            user_data)
+{
+  guint index = g_value_get_uint (value);
+  const gchar *str = "expressive";
+
+  switch (index)
+    {
+    case 0:
+      str = "expressive";
+      break;
+    case 1:
+      str = "black-outline";
+      break;
+    case 2:
+      str = "vanilla-gnome";
+      break;
+    case 3:
+      str = "black";
+      break;
+    case 4:
+      str = "white";
+      break;
+    default:
+      break;
+    }
+
+  return g_variant_new_string (str);
+}
+
+static gboolean
+topbar_theme_get_mapping (GValue   *value,
+                          GVariant *variant,
+                          gpointer  user_data)
+{
+  const gchar *str = g_variant_get_string (variant, NULL);
+  guint index = 0; /* default vanilla */
+
+  if (g_strcmp0 (str, "vanilla") == 0)
+    index = 0;
+  else if (g_strcmp0 (str, "invisible") == 0)
+    index = 1;
+  else if (g_strcmp0 (str, "tinted-dark") == 0)
+    index = 2;
+  else if (g_strcmp0 (str, "tinted-light") == 0)
+    index = 3;
+
+  g_value_set_uint (value, index);
+  return TRUE;
+}
+
+static GVariant *
+topbar_theme_set_mapping (const GValue       *value,
+                          const GVariantType *expected_type,
+                          gpointer            user_data)
+{
+  guint index = g_value_get_uint (value);
+  const gchar *str = "vanilla";
+
+  switch (index)
+    {
+    case 0:
+      str = "vanilla";
+      break;
+    case 1:
+      str = "invisible";
+      break;
+    case 2:
+      str = "tinted-dark";
+      break;
+    case 3:
+      str = "tinted-light";
+      break;
+    default:
+      break;
+    }
+
+  return g_variant_new_string (str);
+}
+
+static gboolean
+appmenu_theme_get_mapping (GValue   *value,
+                           GVariant *variant,
+                           gpointer  user_data)
+{
+  const gchar *str = g_variant_get_string (variant, NULL);
+  guint index = 0; /* default expressive */
+
+  if (g_strcmp0 (str, "expressive") == 0)
+    index = 0;
+  else if (g_strcmp0 (str, "black-outline") == 0)
+    index = 1;
+  else if (g_strcmp0 (str, "vanilla-gnome") == 0)
+    index = 2;
+
+  g_value_set_uint (value, index);
+  return TRUE;
+}
+
+static GVariant *
+appmenu_theme_set_mapping (const GValue       *value,
+                           const GVariantType *expected_type,
+                           gpointer            user_data)
+{
+  guint index = g_value_get_uint (value);
+  const gchar *str = "expressive";
+
+  switch (index)
+    {
+    case 0:
+      str = "expressive";
+      break;
+    case 1:
+      str = "black-outline";
+      break;
+    case 2:
+      str = "vanilla-gnome";
+      break;
+    default:
+      break;
+    }
+
+  return g_variant_new_string (str);
+}
+
+static gboolean
+logo_color_get_mapping (GValue   *value,
+                        GVariant *variant,
+                        gpointer  user_data)
+{
+  const gchar *str = g_variant_get_string (variant, NULL);
+  guint index = 0; /* default colored */
+
+  if (g_strcmp0 (str, "colored") == 0)
+    index = 0;
+  else if (g_strcmp0 (str, "white") == 0)
+    index = 1;
+  else if (g_strcmp0 (str, "black") == 0)
+    index = 2;
+
+  g_value_set_uint (value, index);
+  return TRUE;
+}
+
+static GVariant *
+logo_color_set_mapping (const GValue       *value,
+                        const GVariantType *expected_type,
+                        gpointer            user_data)
+{
+  guint index = g_value_get_uint (value);
+  const gchar *str = "colored";
+
+  switch (index)
+    {
+    case 0:
+      str = "colored";
+      break;
+    case 1:
+      str = "white";
+      break;
+    case 2:
+      str = "black";
+      break;
+    default:
+      break;
+    }
+
+  return g_variant_new_string (str);
+}
+
+static void
+on_dock_logo_color_changed (CcDockPanel *self)
+{
+  if (self->dock_settings && self->topbar_settings)
+    {
+      g_autofree gchar *val = g_settings_get_string (self->dock_settings, "logo-color");
+      set_string_if_valid (self->topbar_settings, "logo-color", val);
+    }
+}
+
 static void
 cc_dock_panel_finalize (GObject *object)
 {
@@ -783,8 +1046,14 @@ cc_dock_panel_class_init (CcDockPanelClass *klass)
   gtk_widget_class_bind_template_child (widget_class, CcDockPanel, card_windows_activity);
   gtk_widget_class_bind_template_child (widget_class, CcDockPanel, card_nextstep);
 
+  gtk_widget_class_bind_template_child (widget_class, CcDockPanel, autohide_row);
   gtk_widget_class_bind_template_child (widget_class, CcDockPanel, icon_size_row);
   gtk_widget_class_bind_template_child (widget_class, CcDockPanel, position_row);
+
+  gtk_widget_class_bind_template_child (widget_class, CcDockPanel, dock_theme_row);
+  gtk_widget_class_bind_template_child (widget_class, CcDockPanel, topbar_theme_row);
+  gtk_widget_class_bind_template_child (widget_class, CcDockPanel, appmenu_theme_row);
+  gtk_widget_class_bind_template_child (widget_class, CcDockPanel, logo_color_row);
 
   gtk_widget_class_bind_template_callback (widget_class, on_apply_flavor_default_clicked);
   gtk_widget_class_bind_template_callback (widget_class, on_apply_flavor_noappmenu_clicked);
@@ -840,6 +1109,11 @@ cc_dock_panel_init (CcDockPanel *self)
       g_object_get (self->dock_settings, "settings-schema", &schema, NULL);
       if (schema)
         {
+          if (g_settings_schema_has_key (schema, "autohide"))
+            g_settings_bind (self->dock_settings, "autohide",
+                             self->autohide_row, "active",
+                             G_SETTINGS_BIND_DEFAULT | G_SETTINGS_BIND_NO_SENSITIVITY);
+
           if (g_settings_schema_has_key (schema, "icon-size"))
             g_settings_bind_with_mapping (self->dock_settings, "icon-size",
                                           self->icon_size_row, "selected",
@@ -856,10 +1130,66 @@ cc_dock_panel_init (CcDockPanel *self)
                                           position_set_mapping,
                                           NULL, NULL);
 
+          if (g_settings_schema_has_key (schema, "theme-mode"))
+            g_settings_bind_with_mapping (self->dock_settings, "theme-mode",
+                                          self->dock_theme_row, "selected",
+                                          G_SETTINGS_BIND_DEFAULT,
+                                          dock_theme_get_mapping,
+                                          dock_theme_set_mapping,
+                                          NULL, NULL);
+
+          if (g_settings_schema_has_key (schema, "logo-color"))
+            g_settings_bind_with_mapping (self->dock_settings, "logo-color",
+                                          self->logo_color_row, "selected",
+                                          G_SETTINGS_BIND_DEFAULT,
+                                          logo_color_get_mapping,
+                                          logo_color_set_mapping,
+                                          NULL, NULL);
+
+          g_settings_schema_unref (schema);
+        }
+
+      g_signal_connect_swapped (self->dock_settings, "changed::logo-color",
+                                G_CALLBACK (on_dock_logo_color_changed), self);
+    }
+
+  if (self->topbar_settings)
+    {
+      GSettingsSchema *schema = NULL;
+      g_object_get (self->topbar_settings, "settings-schema", &schema, NULL);
+      if (schema)
+        {
+          if (g_settings_schema_has_key (schema, "theme"))
+            g_settings_bind_with_mapping (self->topbar_settings, "theme",
+                                          self->topbar_theme_row, "selected",
+                                          G_SETTINGS_BIND_DEFAULT,
+                                          topbar_theme_get_mapping,
+                                          topbar_theme_set_mapping,
+                                          NULL, NULL);
+
           g_settings_schema_unref (schema);
         }
     }
 
+  if (self->appmenu_settings)
+    {
+      GSettingsSchema *schema = NULL;
+      g_object_get (self->appmenu_settings, "settings-schema", &schema, NULL);
+      if (schema)
+        {
+          if (g_settings_schema_has_key (schema, "theme-mode"))
+            g_settings_bind_with_mapping (self->appmenu_settings, "theme-mode",
+                                          self->appmenu_theme_row, "selected",
+                                          G_SETTINGS_BIND_DEFAULT,
+                                          appmenu_theme_get_mapping,
+                                          appmenu_theme_set_mapping,
+                                          NULL, NULL);
+
+          g_settings_schema_unref (schema);
+        }
+    }
+
+  self->current_flavor = detect_current_flavor (self);
   update_selected_flavor_highlight (self);
 
   if (self->dock_settings)
