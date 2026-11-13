@@ -1,8 +1,8 @@
 Name:           arrera-gnome-control-center
-Epoch:          2
+Epoch:          3
 Version:        50.4
-Release:        2026.beta.2%{?dist}
-Summary:        Paramètres de GNOME custom pour intégrer l'intégraliter des parametre des extension gnome d'Arrera Blue
+Release:        2026.beta.3%{?dist}
+Summary:        Paramètres GNOME personnalisés avec support natif de l'extension Arrera Desktop
 
 License:        GPL-2.0-or-later
 URL:            https://github.com/Arrera-Blue/gnome-control-center
@@ -70,6 +70,9 @@ Requires:       gsettings-desktop-schemas
 Requires:       accountsservice
 Requires:       colord
 Requires:       /usr/bin/tecla
+Recommends:     gnome-shell-extension-gpaste
+Recommends:     gpaste
+Recommends:     gnome-shell-extension-appindicator
 
 # Remplace, rend obsolète et fournit gnome-control-center pour assurer la désinstallation automatique du paquet de base
 Provides:       gnome-control-center = %{?epoch:%{epoch}:}%{version}-%{release}
@@ -82,7 +85,7 @@ Conflicts:      gnome-control-center
 
 %description
 Panneau de configuration GNOME Settings intégrant la configuration native
-de l'extension Arrera Dock pour la distribution Arrera Linux (Version Bêta).
+de l'extension unifiée Arrera Desktop pour la distribution Arrera Linux.
 
 %prep
 %autosetup -p1 -n %{name}-%{version}
@@ -125,5 +128,11 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/*.desktop
 %{_mandir}/man1/gnome-control-center.1*
 
 %changelog
+* Fri Nov 13 2026 Baptiste Pauchet <contact@arrera-linux.org> - 2:50.4-2026.beta.3
+- Support unifié pour l'extension arrera-desktop
+- Déblocage du masquage automatique du dock sur toutes les saveurs (sauf NeXTStep)
+- Ajout de l'interrupteur pour la capture par secouement de souris
+- Intégration et recommandations pour GPaste et AppIndicator
+
 * Sun Sep 06 2026 BaptisteP <contact@arrera-linux.org> - 1:50.4-0.1.beta1.arrera
 - Version bêta initiale de arrera-gnome-control-center avec support natif du dock Arrera

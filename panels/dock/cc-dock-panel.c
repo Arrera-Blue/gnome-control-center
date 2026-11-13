@@ -23,9 +23,7 @@ struct _CcDockPanel
   CcPanel             parent_instance;
 
   GSettings          *shell_settings;
-  GSettings          *dock_settings;
-  GSettings          *topbar_settings;
-  GSettings          *appmenu_settings;
+  GSettings          *desktop_settings;
 
   FlavorId            current_flavor;
 
@@ -44,8 +42,9 @@ struct _CcDockPanel
 
   AdwComboRow        *dock_theme_row;
   AdwComboRow        *topbar_theme_row;
-  AdwComboRow        *appmenu_theme_row;
   AdwComboRow        *logo_color_row;
+  AdwSwitchRow       *spot_row;
+  AdwSwitchRow       *shake_screenshot_row;
 };
 
 CC_PANEL_REGISTER (CcDockPanel, cc_dock_panel)
@@ -56,44 +55,29 @@ typedef struct
   gboolean     enable;
 } ExtensionConfig;
 
-/* Extensions par défaut (saveurs 1, 3, 4, 5) */
+/* Configuration des extensions GNOME Shell requises par Arrera Blue */
 static const ExtensionConfig flavor_default_extensions[] = {
-  { "dock@linux.arrera-software.fr", TRUE },
-  { "top-bar@linux.arrera-software.fr", TRUE },
-  { "app-menu@linux.arrera-software.fr", TRUE },
-  { "org.gnome.shell.extensions.spot", FALSE },
+  { "arrera-desktop@linux.arrera-software.fr", TRUE },
+  { "arrera-desktop", TRUE },
   { "forge@jmmaranan.com", TRUE },
   { "GPaste@gnome-shell-extensions.gnome.org", TRUE },
+  { "gpaste@gnome-shell-extensions.gnome.org", TRUE },
   { "appindicatorsupport@rgcjonas.gmail.com", TRUE },
-  { "dash-to-dock@micxgx.gmail.com", FALSE },
   { "nightthemeswitcher@romainvigier.fr", TRUE },
+  { "background-logo@fedorahosted.org", TRUE },
+  { "org.gnome.shell.extensions.spot", FALSE },
+  { "dash-to-dock@micxgx.gmail.com", FALSE },
   { "restartto@tiagoporsch.github.io", FALSE },
   { "apps-menu@gnome-shell-extensions.gcampax.github.com", FALSE },
-  { "background-logo@fedorahosted.org", TRUE },
   { "gsconnect@andyholmes.github.io", FALSE },
   { "launch-new-instance@gnome-shell-extensions.gcampax.github.com", FALSE },
   { "places-menu@gnome-shell-extensions.gcampax.github.com", FALSE },
   { "window-list@gnome-shell-extensions.gcampax.github.com", FALSE },
-};
-
-/* Saveur 2 : Menu d'application GNOME (sans app-menu Arrera) */
-static const ExtensionConfig flavor_noappmenu_extensions[] = {
-  { "dock@linux.arrera-software.fr", TRUE },
-  { "top-bar@linux.arrera-software.fr", TRUE },
+  /* Anciennes extensions désactivées proprement */
+  { "dock@linux.arrera-software.fr", FALSE },
+  { "top-bar@linux.arrera-software.fr", FALSE },
   { "app-menu@linux.arrera-software.fr", FALSE },
-  { "org.gnome.shell.extensions.spot", FALSE },
-  { "forge@jmmaranan.com", TRUE },
-  { "GPaste@gnome-shell-extensions.gnome.org", TRUE },
-  { "appindicatorsupport@rgcjonas.gmail.com", TRUE },
-  { "dash-to-dock@micxgx.gmail.com", FALSE },
-  { "nightthemeswitcher@romainvigier.fr", TRUE },
-  { "restartto@tiagoporsch.github.io", FALSE },
-  { "apps-menu@gnome-shell-extensions.gcampax.github.com", FALSE },
-  { "background-logo@fedorahosted.org", TRUE },
-  { "gsconnect@andyholmes.github.io", FALSE },
-  { "launch-new-instance@gnome-shell-extensions.gcampax.github.com", FALSE },
-  { "places-menu@gnome-shell-extensions.gcampax.github.com", FALSE },
-  { "window-list@gnome-shell-extensions.gcampax.github.com", FALSE },
+  { "arrera-dock", FALSE },
 };
 
 static void
@@ -194,163 +178,182 @@ apply_extensions_config (GSettings *shell_settings, const ExtensionConfig *confi
   g_ptr_array_free (new_disabled, TRUE);
 }
 
-/* Réinitialise proprement les extensions GNOME Shell pour éviter les incohérences d'acteurs */
+/* Réinitialise proprement les extensions GNOME Shell pour appliquer la nouvelle disposition */
 static void
-reload_extensions_async (gboolean enable_app_menu)
+reload_extensions_async (void)
 {
-  g_autofree gchar *cmd = g_strdup_printf (
+  g_autofree gchar *cmd = g_strdup (
     "/usr/bin/bash -c '"
     "gnome-extensions disable dock@linux.arrera-software.fr 2>/dev/null || true; "
     "gnome-extensions disable top-bar@linux.arrera-software.fr 2>/dev/null || true; "
+    "gnome-extensions disable app-menu@linux.arrera-software.fr 2>/dev/null || true; "
     "gnome-extensions disable appindicatorsupport@rgcjonas.gmail.com 2>/dev/null || true; "
     "gnome-extensions disable GPaste@gnome-shell-extensions.gnome.org 2>/dev/null || true; "
+    "gnome-extensions disable gpaste@gnome-shell-extensions.gnome.org 2>/dev/null || true; "
     "sleep 0.25; "
-    "gnome-extensions enable top-bar@linux.arrera-software.fr 2>/dev/null || true; "
-    "gnome-extensions enable dock@linux.arrera-software.fr 2>/dev/null || true; "
+    "gnome-extensions enable arrera-desktop@linux.arrera-software.fr 2>/dev/null || true; "
+    "gnome-extensions enable arrera-desktop 2>/dev/null || true; "
+    "sleep 0.25; "
+    "systemctl --user start org.gnome.GPaste.service 2>/dev/null || true; "
     "gnome-extensions enable appindicatorsupport@rgcjonas.gmail.com 2>/dev/null || true; "
     "gnome-extensions enable GPaste@gnome-shell-extensions.gnome.org 2>/dev/null || true; "
-    "%s'",
-    enable_app_menu
-      ? "gnome-extensions enable app-menu@linux.arrera-software.fr 2>/dev/null || true;"
-      : "gnome-extensions disable app-menu@linux.arrera-software.fr 2>/dev/null || true;"
+    "gnome-extensions enable gpaste@gnome-shell-extensions.gnome.org 2>/dev/null || true;'"
   );
   g_spawn_command_line_async (cmd, NULL);
 }
 
-/* Réglages par défaut (Saveurs 1 et 2) */
+/* Réglages par défaut (Saveur 1 : Arrera par défaut, synchronisé avec default_saveur.txt) */
 static void
-apply_default_dock_settings (CcDockPanel *self)
+apply_default_settings (CcDockPanel *self)
 {
-  if (!self->dock_settings)
+  if (!self->desktop_settings)
     return;
 
-  set_bool_if_valid (self->dock_settings, "autohide", TRUE);
-  set_bool_if_valid (self->dock_settings, "extend-on-maximize", TRUE);
-  set_bool_if_valid (self->dock_settings, "always-bar-mode", FALSE);
-  set_string_if_valid (self->dock_settings, "bar-icons-alignment", "center");
-  set_string_if_valid (self->dock_settings, "icon-size", "medium");
-  set_string_if_valid (self->dock_settings, "theme-mode", "expressive");
-  set_string_if_valid (self->dock_settings, "position", "bottom");
-  set_bool_if_valid (self->dock_settings, "show-quick-settings", FALSE);
-  set_bool_if_valid (self->dock_settings, "show-date-menu", FALSE);
-  set_bool_if_valid (self->dock_settings, "show-activities-button", FALSE);
-  set_string_if_valid (self->dock_settings, "logo-color", "colored");
-  set_string_if_valid (self->dock_settings, "clock-position", "top");
-  set_string_if_valid (self->dock_settings, "date-format", "default");
-  set_bool_if_valid (self->dock_settings, "dark-tiles", FALSE);
-  set_bool_if_valid (self->dock_settings, "island-mode", FALSE);
-  set_string_if_valid (self->dock_settings, "vertical-alignment", "top");
-  set_bool_if_valid (self->dock_settings, "disable-overview-at-startup", FALSE);
+  /* 1. Dock Arrera */
+  set_string_if_valid (self->desktop_settings, "position", "bottom");
+  set_bool_if_valid (self->desktop_settings, "autohide", FALSE);
+  set_bool_if_valid (self->desktop_settings, "extend-on-maximize", TRUE);
+  set_bool_if_valid (self->desktop_settings, "always-bar-mode", FALSE);
+  set_string_if_valid (self->desktop_settings, "bar-icons-alignment", "center");
+  set_string_if_valid (self->desktop_settings, "icon-size", "medium");
+  set_bool_if_valid (self->desktop_settings, "island-mode", FALSE);
+  set_string_if_valid (self->desktop_settings, "vertical-alignment", "center");
+  set_bool_if_valid (self->desktop_settings, "show-activities-button", FALSE);
+  set_bool_if_valid (self->desktop_settings, "show-date-menu", FALSE);
+  set_bool_if_valid (self->desktop_settings, "show-quick-settings", FALSE);
+  set_string_if_valid (self->desktop_settings, "clock-position", "bottom");
+  set_string_if_valid (self->desktop_settings, "date-format", "default");
+  set_bool_if_valid (self->desktop_settings, "disable-overview-at-startup", FALSE);
+
+  /* 2. Top Bar */
+  set_string_if_valid (self->desktop_settings, "topbar-theme", "vanilla");
+  set_string_if_valid (self->desktop_settings, "invisible-elements-color", "auto");
+  set_bool_if_valid (self->desktop_settings, "hide-top-bar", FALSE);
+  set_bool_if_valid (self->desktop_settings, "keep-activities-button", FALSE);
+
+  /* 3. Lanceur d'applications Arrera */
+  set_bool_if_valid (self->desktop_settings, "super-key-opens-launcher", TRUE);
+  set_bool_if_valid (self->desktop_settings, "replace-gnome-app-menu", TRUE);
+  set_bool_if_valid (self->desktop_settings, "compact-mode", FALSE);
+  set_string_if_valid (self->desktop_settings, "menu-position", "center");
+
+  /* 4. Thème visuel, Logo et Arrera Spot */
+  set_string_if_valid (self->desktop_settings, "theme-mode", "expressive");
+  set_string_if_valid (self->desktop_settings, "logo-color", "colored");
+  set_bool_if_valid (self->desktop_settings, "launch-custom-app", FALSE);
+  set_string_if_valid (self->desktop_settings, "custom-app-id", "");
+  set_bool_if_valid (self->desktop_settings, "enable-arrera-spot", TRUE);
+
+  /* 5. Gestes */
+  set_bool_if_valid (self->desktop_settings, "enable-shake-to-screenshot", FALSE);
 }
 
+/* Réglages Saveur 2 : Menu d'application GNOME natif (synchronisé avec default_no_spotlight.txt) */
 static void
-apply_default_topbar_settings (CcDockPanel *self)
+apply_noappmenu_settings (CcDockPanel *self)
 {
-  if (!self->topbar_settings)
+  apply_default_settings (self);
+
+  if (!self->desktop_settings)
     return;
 
-  set_bool_if_valid (self->topbar_settings, "hide-top-bar", FALSE);
-  set_string_if_valid (self->topbar_settings, "theme", "vanilla");
-  set_string_if_valid (self->topbar_settings, "invisible-elements-color", "auto");
-  set_string_if_valid (self->topbar_settings, "appindicator-position", "right");
-  set_string_if_valid (self->topbar_settings, "logo-color", "colored");
-  set_bool_if_valid (self->topbar_settings, "launch-custom-app", FALSE);
-  set_string_if_valid (self->topbar_settings, "custom-app-id", "");
-  set_bool_if_valid (self->topbar_settings, "keep-activities-button", FALSE);
+  /* Rétablit le lanceur d'applications natif de GNOME */
+  set_bool_if_valid (self->desktop_settings, "super-key-opens-launcher", FALSE);
+  set_bool_if_valid (self->desktop_settings, "replace-gnome-app-menu", FALSE);
+  set_bool_if_valid (self->desktop_settings, "enable-arrera-spot", TRUE);
+  set_bool_if_valid (self->desktop_settings, "enable-shake-to-screenshot", FALSE);
 }
 
+/* Réglages Saveur 3 : Disposition Windows 10/11 (synchronisé avec windows_saveur.txt) */
 static void
-apply_default_appmenu_settings (CcDockPanel *self)
+apply_windows_settings (CcDockPanel *self)
 {
-  if (!self->appmenu_settings)
+  if (!self->desktop_settings)
     return;
 
-  set_bool_if_valid (self->appmenu_settings, "super-key-opens-launcher", TRUE);
-  set_bool_if_valid (self->appmenu_settings, "replace-gnome-app-menu", TRUE);
-  set_bool_if_valid (self->appmenu_settings, "compact-mode", FALSE);
-  set_string_if_valid (self->appmenu_settings, "theme-mode", "expressive");
-  set_string_if_valid (self->appmenu_settings, "menu-position", "center");
+  /* 1. Dock Arrera */
+  set_string_if_valid (self->desktop_settings, "position", "bottom");
+  set_bool_if_valid (self->desktop_settings, "autohide", FALSE);
+  set_bool_if_valid (self->desktop_settings, "extend-on-maximize", FALSE);
+  set_bool_if_valid (self->desktop_settings, "always-bar-mode", TRUE);
+  set_string_if_valid (self->desktop_settings, "bar-icons-alignment", "left");
+  set_string_if_valid (self->desktop_settings, "icon-size", "medium");
+  set_bool_if_valid (self->desktop_settings, "island-mode", FALSE);
+  set_string_if_valid (self->desktop_settings, "vertical-alignment", "center");
+  set_bool_if_valid (self->desktop_settings, "show-activities-button", FALSE);
+  set_bool_if_valid (self->desktop_settings, "show-date-menu", TRUE);
+  set_bool_if_valid (self->desktop_settings, "show-quick-settings", TRUE);
+  set_string_if_valid (self->desktop_settings, "clock-position", "bottom");
+  set_string_if_valid (self->desktop_settings, "date-format", "default");
+  set_bool_if_valid (self->desktop_settings, "disable-overview-at-startup", FALSE);
+
+  /* 2. Top Bar */
+  set_string_if_valid (self->desktop_settings, "topbar-theme", "vanilla");
+  set_string_if_valid (self->desktop_settings, "invisible-elements-color", "auto");
+  set_bool_if_valid (self->desktop_settings, "hide-top-bar", TRUE);
+  set_bool_if_valid (self->desktop_settings, "keep-activities-button", FALSE);
+
+  /* 3. Lanceur d'applications Arrera */
+  set_bool_if_valid (self->desktop_settings, "super-key-opens-launcher", TRUE);
+  set_bool_if_valid (self->desktop_settings, "replace-gnome-app-menu", TRUE);
+  set_bool_if_valid (self->desktop_settings, "compact-mode", TRUE);
+  set_string_if_valid (self->desktop_settings, "menu-position", "bottom-left");
+
+  /* 4. Thème visuel, Logo et Arrera Spot */
+  set_string_if_valid (self->desktop_settings, "theme-mode", "expressive");
+  set_string_if_valid (self->desktop_settings, "logo-color", "colored");
+  set_bool_if_valid (self->desktop_settings, "launch-custom-app", FALSE);
+  set_string_if_valid (self->desktop_settings, "custom-app-id", "");
+  set_bool_if_valid (self->desktop_settings, "enable-arrera-spot", FALSE);
+
+  /* 5. Gestes */
+  set_bool_if_valid (self->desktop_settings, "enable-shake-to-screenshot", FALSE);
 }
 
-/* Réglages Windows 10/11 (Saveurs 3 & 4) */
+/* Réglages Saveur 5 : Bureau NeXTStep (synchronisé avec nextstep_spotlight_saveur.txt) */
 static void
-apply_windows_dock_settings (CcDockPanel *self)
+apply_nextstep_settings (CcDockPanel *self)
 {
-  if (!self->dock_settings)
+  if (!self->desktop_settings)
     return;
 
-  set_bool_if_valid (self->dock_settings, "autohide", FALSE);
-  set_bool_if_valid (self->dock_settings, "extend-on-maximize", TRUE);
-  set_bool_if_valid (self->dock_settings, "always-bar-mode", TRUE);
-  set_string_if_valid (self->dock_settings, "bar-icons-alignment", "left");
-  set_string_if_valid (self->dock_settings, "icon-size", "medium");
-  set_string_if_valid (self->dock_settings, "theme-mode", "expressive");
-  set_string_if_valid (self->dock_settings, "position", "bottom");
-  set_bool_if_valid (self->dock_settings, "show-quick-settings", TRUE);
-  set_bool_if_valid (self->dock_settings, "show-date-menu", TRUE);
-  set_bool_if_valid (self->dock_settings, "show-activities-button", FALSE);
-  set_string_if_valid (self->dock_settings, "logo-color", "colored");
-  set_string_if_valid (self->dock_settings, "clock-position", "bottom");
-  set_string_if_valid (self->dock_settings, "date-format", "default");
-  set_bool_if_valid (self->dock_settings, "dark-tiles", FALSE);
-  set_bool_if_valid (self->dock_settings, "island-mode", FALSE);
-  set_string_if_valid (self->dock_settings, "vertical-alignment", "top");
-  set_bool_if_valid (self->dock_settings, "disable-overview-at-startup", TRUE);
-}
+  /* 1. Dock Arrera */
+  set_string_if_valid (self->desktop_settings, "position", "right");
+  set_bool_if_valid (self->desktop_settings, "autohide", FALSE);
+  set_bool_if_valid (self->desktop_settings, "extend-on-maximize", FALSE);
+  set_bool_if_valid (self->desktop_settings, "always-bar-mode", TRUE);
+  set_string_if_valid (self->desktop_settings, "bar-icons-alignment", "left");
+  set_string_if_valid (self->desktop_settings, "icon-size", "medium");
+  set_bool_if_valid (self->desktop_settings, "island-mode", TRUE);
+  set_string_if_valid (self->desktop_settings, "vertical-alignment", "top");
+  set_bool_if_valid (self->desktop_settings, "show-activities-button", TRUE);
+  set_bool_if_valid (self->desktop_settings, "show-date-menu", TRUE);
+  set_bool_if_valid (self->desktop_settings, "show-quick-settings", TRUE);
+  set_string_if_valid (self->desktop_settings, "clock-position", "bottom");
+  set_string_if_valid (self->desktop_settings, "date-format", "default");
+  set_bool_if_valid (self->desktop_settings, "disable-overview-at-startup", FALSE);
 
-static void
-apply_windows_topbar_settings (CcDockPanel *self)
-{
-  if (!self->topbar_settings)
-    return;
+  /* 2. Top Bar */
+  set_string_if_valid (self->desktop_settings, "topbar-theme", "vanilla");
+  set_string_if_valid (self->desktop_settings, "invisible-elements-color", "auto");
+  set_bool_if_valid (self->desktop_settings, "hide-top-bar", TRUE);
+  set_bool_if_valid (self->desktop_settings, "keep-activities-button", FALSE);
 
-  set_bool_if_valid (self->topbar_settings, "hide-top-bar", TRUE);
-  set_string_if_valid (self->topbar_settings, "theme", "vanilla");
-  set_string_if_valid (self->topbar_settings, "invisible-elements-color", "auto");
-  set_string_if_valid (self->topbar_settings, "appindicator-position", "right");
-  set_string_if_valid (self->topbar_settings, "logo-color", "colored");
-  set_bool_if_valid (self->topbar_settings, "launch-custom-app", FALSE);
-  set_string_if_valid (self->topbar_settings, "custom-app-id", "");
-  set_bool_if_valid (self->topbar_settings, "keep-activities-button", FALSE);
-}
+  /* 3. Lanceur d'applications Arrera */
+  set_bool_if_valid (self->desktop_settings, "super-key-opens-launcher", TRUE);
+  set_bool_if_valid (self->desktop_settings, "replace-gnome-app-menu", TRUE);
+  set_bool_if_valid (self->desktop_settings, "compact-mode", FALSE);
+  set_string_if_valid (self->desktop_settings, "menu-position", "center");
 
-static void
-apply_windows_appmenu_settings (CcDockPanel *self)
-{
-  if (!self->appmenu_settings)
-    return;
+  /* 4. Thème visuel, Logo et Arrera Spot */
+  set_string_if_valid (self->desktop_settings, "theme-mode", "vanilla-gnome");
+  set_string_if_valid (self->desktop_settings, "logo-color", "colored");
+  set_bool_if_valid (self->desktop_settings, "launch-custom-app", FALSE);
+  set_string_if_valid (self->desktop_settings, "custom-app-id", "");
+  set_bool_if_valid (self->desktop_settings, "enable-arrera-spot", TRUE);
 
-  set_bool_if_valid (self->appmenu_settings, "super-key-opens-launcher", TRUE);
-  set_bool_if_valid (self->appmenu_settings, "replace-gnome-app-menu", TRUE);
-  set_bool_if_valid (self->appmenu_settings, "compact-mode", TRUE);
-  set_string_if_valid (self->appmenu_settings, "theme-mode", "expressive");
-  set_string_if_valid (self->appmenu_settings, "menu-position", "bottom-left");
-}
-
-/* Réglages NeXTStep (Saveur 5) */
-static void
-apply_nextstep_dock_settings (CcDockPanel *self)
-{
-  if (!self->dock_settings)
-    return;
-
-  set_bool_if_valid (self->dock_settings, "autohide", FALSE);
-  set_bool_if_valid (self->dock_settings, "extend-on-maximize", FALSE);
-  set_bool_if_valid (self->dock_settings, "always-bar-mode", FALSE);
-  set_string_if_valid (self->dock_settings, "bar-icons-alignment", "left");
-  set_string_if_valid (self->dock_settings, "icon-size", "medium");
-  set_string_if_valid (self->dock_settings, "theme-mode", "expressive");
-  set_string_if_valid (self->dock_settings, "position", "right");
-  set_bool_if_valid (self->dock_settings, "show-quick-settings", TRUE);
-  set_bool_if_valid (self->dock_settings, "show-date-menu", TRUE);
-  set_bool_if_valid (self->dock_settings, "show-activities-button", TRUE);
-  set_string_if_valid (self->dock_settings, "logo-color", "colored");
-  set_string_if_valid (self->dock_settings, "clock-position", "bottom");
-  set_string_if_valid (self->dock_settings, "date-format", "default");
-  set_bool_if_valid (self->dock_settings, "dark-tiles", TRUE);
-  set_bool_if_valid (self->dock_settings, "island-mode", TRUE);
-  set_string_if_valid (self->dock_settings, "vertical-alignment", "bottom");
-  set_bool_if_valid (self->dock_settings, "disable-overview-at-startup", TRUE);
+  /* 5. Gestes */
+  set_bool_if_valid (self->desktop_settings, "enable-shake-to-screenshot", FALSE);
 }
 
 static void
@@ -421,39 +424,31 @@ detect_current_flavor (CcDockPanel *self)
   gboolean hide_top_bar = FALSE;
   gboolean always_bar_mode = FALSE;
   gboolean show_activities = FALSE;
-  gboolean appmenu_enabled = FALSE;
+  gboolean replace_app_menu = TRUE;
 
-  if (self->dock_settings)
+  if (self->desktop_settings)
     {
       GSettingsSchema *schema = NULL;
-      g_object_get (self->dock_settings, "settings-schema", &schema, NULL);
+      g_object_get (self->desktop_settings, "settings-schema", &schema, NULL);
       if (schema)
         {
           if (g_settings_schema_has_key (schema, "position"))
-            position = g_settings_get_string (self->dock_settings, "position");
+            position = g_settings_get_string (self->desktop_settings, "position");
           if (g_settings_schema_has_key (schema, "island-mode"))
-            island_mode = g_settings_get_boolean (self->dock_settings, "island-mode");
+            island_mode = g_settings_get_boolean (self->desktop_settings, "island-mode");
           if (g_settings_schema_has_key (schema, "always-bar-mode"))
-            always_bar_mode = g_settings_get_boolean (self->dock_settings, "always-bar-mode");
+            always_bar_mode = g_settings_get_boolean (self->desktop_settings, "always-bar-mode");
           if (g_settings_schema_has_key (schema, "show-activities-button"))
-            show_activities = g_settings_get_boolean (self->dock_settings, "show-activities-button");
-          g_settings_schema_unref (schema);
-        }
-    }
-
-  if (self->topbar_settings)
-    {
-      GSettingsSchema *schema = NULL;
-      g_object_get (self->topbar_settings, "settings-schema", &schema, NULL);
-      if (schema)
-        {
+            show_activities = g_settings_get_boolean (self->desktop_settings, "show-activities-button");
           if (g_settings_schema_has_key (schema, "hide-top-bar"))
-            hide_top_bar = g_settings_get_boolean (self->topbar_settings, "hide-top-bar");
+            hide_top_bar = g_settings_get_boolean (self->desktop_settings, "hide-top-bar");
+          if (g_settings_schema_has_key (schema, "replace-gnome-app-menu"))
+            replace_app_menu = g_settings_get_boolean (self->desktop_settings, "replace-gnome-app-menu");
           g_settings_schema_unref (schema);
         }
     }
 
-  if (island_mode)
+  if (island_mode || (g_strcmp0 (position, "right") == 0))
     return FLAVOR_NEXTSTEP;
 
   if (hide_top_bar || always_bar_mode)
@@ -464,8 +459,7 @@ detect_current_flavor (CcDockPanel *self)
         return FLAVOR_WINDOWS;
     }
 
-  appmenu_enabled = is_extension_enabled (self->shell_settings, "app-menu@linux.arrera-software.fr");
-  if (!appmenu_enabled)
+  if (!replace_app_menu)
     return FLAVOR_NOAPPMENU;
 
   return FLAVOR_DEFAULT;
@@ -475,7 +469,6 @@ static void
 update_selected_flavor_highlight (CcDockPanel *self)
 {
   FlavorId current;
-  g_autofree gchar *position = NULL;
   gboolean is_flavor_1_or_2;
   gboolean can_autohide;
 
@@ -510,12 +503,10 @@ update_selected_flavor_highlight (CcDockPanel *self)
         gtk_widget_remove_css_class (cards[i].widget, "flavor-selected");
     }
 
-  if (self->dock_settings)
-    position = g_settings_get_string (self->dock_settings, "position");
-
   is_flavor_1_or_2 = (current == FLAVOR_DEFAULT || current == FLAVOR_NOAPPMENU);
-  /* Le masquage automatique est débloqué uniquement si on est en disposition 1 ou 2 avec le dock en bas */
-  can_autohide = is_flavor_1_or_2 && (g_strcmp0 (position, "bottom") == 0);
+
+  /* Le masquage automatique est autorisé dans toutes les saveurs sauf NeXTStep */
+  can_autohide = (current != FLAVOR_NEXTSTEP);
 
   if (self->autohide_row)
     {
@@ -523,12 +514,9 @@ update_selected_flavor_highlight (CcDockPanel *self)
       if (can_autohide)
         adw_action_row_set_subtitle (ADW_ACTION_ROW (self->autohide_row),
                                      _("Masque automatiquement le dock lorsqu'une fenêtre le chevauche"));
-      else if (!is_flavor_1_or_2)
-        adw_action_row_set_subtitle (ADW_ACTION_ROW (self->autohide_row),
-                                     _("Verrouillé : non disponible pour cette disposition"));
       else
         adw_action_row_set_subtitle (ADW_ACTION_ROW (self->autohide_row),
-                                     _("Verrouillé : disponible uniquement avec le dock en bas"));
+                                     _("Verrouillé : non disponible pour la disposition NeXTStep"));
     }
 
   if (self->position_row)
@@ -554,22 +542,16 @@ on_apply_flavor_default_clicked (CcDockPanel *self)
                            flavor_default_extensions,
                            G_N_ELEMENTS (flavor_default_extensions));
 
-  /* 2. Arrera Dock */
-  apply_default_dock_settings (self);
+  /* 2. Arrera Desktop Settings */
+  apply_default_settings (self);
 
-  /* 3. Arrera Top Bar */
-  apply_default_topbar_settings (self);
+  /* 3. Rechargement des extensions */
+  reload_extensions_async ();
 
-  /* 4. Arrera App Menu */
-  apply_default_appmenu_settings (self);
-
-  /* 5. Synchronisation des extensions Shell */
-  reload_extensions_async (TRUE);
-
-  /* 6. Mise à jour de la mise en valeur de la saveur sélectionnée */
+  /* 4. Mise à jour visuelle */
   update_selected_flavor_highlight (self);
 
-  /* 7. Notification Toast */
+  /* 5. Notification Toast */
   if (self->toast_overlay)
     {
       adw_toast_overlay_add_toast (self->toast_overlay,
@@ -586,25 +568,19 @@ on_apply_flavor_noappmenu_clicked (CcDockPanel *self)
 
   /* 1. Extensions GNOME */
   apply_extensions_config (self->shell_settings,
-                           flavor_noappmenu_extensions,
-                           G_N_ELEMENTS (flavor_noappmenu_extensions));
+                           flavor_default_extensions,
+                           G_N_ELEMENTS (flavor_default_extensions));
 
-  /* 2. Arrera Dock */
-  apply_default_dock_settings (self);
+  /* 2. Arrera Desktop Settings */
+  apply_noappmenu_settings (self);
 
-  /* 3. Arrera Top Bar */
-  apply_default_topbar_settings (self);
+  /* 3. Rechargement des extensions */
+  reload_extensions_async ();
 
-  /* 4. Arrera App Menu */
-  apply_default_appmenu_settings (self);
-
-  /* 5. Synchronisation des extensions Shell */
-  reload_extensions_async (FALSE);
-
-  /* 6. Mise à jour de la mise en valeur de la saveur sélectionnée */
+  /* 4. Mise à jour visuelle */
   update_selected_flavor_highlight (self);
 
-  /* 7. Notification Toast */
+  /* 5. Notification Toast */
   if (self->toast_overlay)
     {
       adw_toast_overlay_add_toast (self->toast_overlay,
@@ -624,22 +600,16 @@ on_apply_flavor_windows_clicked (CcDockPanel *self)
                            flavor_default_extensions,
                            G_N_ELEMENTS (flavor_default_extensions));
 
-  /* 2. Arrera Dock */
-  apply_windows_dock_settings (self);
+  /* 2. Arrera Desktop Settings */
+  apply_windows_settings (self);
 
-  /* 3. Arrera Top Bar */
-  apply_windows_topbar_settings (self);
+  /* 3. Rechargement des extensions */
+  reload_extensions_async ();
 
-  /* 4. Arrera App Menu */
-  apply_windows_appmenu_settings (self);
-
-  /* 5. Synchronisation des extensions Shell */
-  reload_extensions_async (TRUE);
-
-  /* 6. Mise à jour de la mise en valeur de la saveur sélectionnée */
+  /* 4. Mise à jour visuelle */
   update_selected_flavor_highlight (self);
 
-  /* 7. Notification Toast */
+  /* 5. Notification Toast */
   if (self->toast_overlay)
     {
       adw_toast_overlay_add_toast (self->toast_overlay,
@@ -659,24 +629,18 @@ on_apply_flavor_windows_activity_clicked (CcDockPanel *self)
                            flavor_default_extensions,
                            G_N_ELEMENTS (flavor_default_extensions));
 
-  /* 2. Arrera Dock */
-  apply_windows_dock_settings (self);
-  if (self->dock_settings)
-    set_bool_if_valid (self->dock_settings, "show-activities-button", TRUE);
+  /* 2. Arrera Desktop Settings */
+  apply_windows_settings (self);
+  if (self->desktop_settings)
+    set_bool_if_valid (self->desktop_settings, "show-activities-button", TRUE);
 
-  /* 3. Arrera Top Bar */
-  apply_windows_topbar_settings (self);
+  /* 3. Rechargement des extensions */
+  reload_extensions_async ();
 
-  /* 4. Arrera App Menu */
-  apply_windows_appmenu_settings (self);
-
-  /* 5. Synchronisation des extensions Shell */
-  reload_extensions_async (TRUE);
-
-  /* 6. Mise à jour de la mise en valeur de la saveur sélectionnée */
+  /* 4. Mise à jour visuelle */
   update_selected_flavor_highlight (self);
 
-  /* 7. Notification Toast */
+  /* 5. Notification Toast */
   if (self->toast_overlay)
     {
       adw_toast_overlay_add_toast (self->toast_overlay,
@@ -696,22 +660,16 @@ on_apply_flavor_nextstep_clicked (CcDockPanel *self)
                            flavor_default_extensions,
                            G_N_ELEMENTS (flavor_default_extensions));
 
-  /* 2. Arrera Dock */
-  apply_nextstep_dock_settings (self);
+  /* 2. Arrera Desktop Settings */
+  apply_nextstep_settings (self);
 
-  /* 3. Arrera Top Bar */
-  apply_windows_topbar_settings (self);
+  /* 3. Rechargement des extensions */
+  reload_extensions_async ();
 
-  /* 4. Arrera App Menu */
-  apply_default_appmenu_settings (self);
-
-  /* 5. Synchronisation des extensions Shell */
-  reload_extensions_async (TRUE);
-
-  /* 6. Mise à jour de la mise en valeur de la saveur sélectionnée */
+  /* 4. Mise à jour visuelle */
   update_selected_flavor_highlight (self);
 
-  /* 7. Notification Toast */
+  /* 5. Notification Toast */
   if (self->toast_overlay)
     {
       adw_toast_overlay_add_toast (self->toast_overlay,
@@ -915,51 +873,6 @@ topbar_theme_set_mapping (const GValue       *value,
 }
 
 static gboolean
-appmenu_theme_get_mapping (GValue   *value,
-                           GVariant *variant,
-                           gpointer  user_data)
-{
-  const gchar *str = g_variant_get_string (variant, NULL);
-  guint index = 0; /* default expressive */
-
-  if (g_strcmp0 (str, "expressive") == 0)
-    index = 0;
-  else if (g_strcmp0 (str, "black-outline") == 0)
-    index = 1;
-  else if (g_strcmp0 (str, "vanilla-gnome") == 0)
-    index = 2;
-
-  g_value_set_uint (value, index);
-  return TRUE;
-}
-
-static GVariant *
-appmenu_theme_set_mapping (const GValue       *value,
-                           const GVariantType *expected_type,
-                           gpointer            user_data)
-{
-  guint index = g_value_get_uint (value);
-  const gchar *str = "expressive";
-
-  switch (index)
-    {
-    case 0:
-      str = "expressive";
-      break;
-    case 1:
-      str = "black-outline";
-      break;
-    case 2:
-      str = "vanilla-gnome";
-      break;
-    default:
-      break;
-    }
-
-  return g_variant_new_string (str);
-}
-
-static gboolean
 logo_color_get_mapping (GValue   *value,
                         GVariant *variant,
                         gpointer  user_data)
@@ -1005,24 +918,12 @@ logo_color_set_mapping (const GValue       *value,
 }
 
 static void
-on_dock_logo_color_changed (CcDockPanel *self)
-{
-  if (self->dock_settings && self->topbar_settings)
-    {
-      g_autofree gchar *val = g_settings_get_string (self->dock_settings, "logo-color");
-      set_string_if_valid (self->topbar_settings, "logo-color", val);
-    }
-}
-
-static void
 cc_dock_panel_finalize (GObject *object)
 {
   CcDockPanel *self = CC_DOCK_PANEL (object);
 
   g_clear_object (&self->shell_settings);
-  g_clear_object (&self->dock_settings);
-  g_clear_object (&self->topbar_settings);
-  g_clear_object (&self->appmenu_settings);
+  g_clear_object (&self->desktop_settings);
 
   G_OBJECT_CLASS (cc_dock_panel_parent_class)->finalize (object);
 }
@@ -1052,8 +953,9 @@ cc_dock_panel_class_init (CcDockPanelClass *klass)
 
   gtk_widget_class_bind_template_child (widget_class, CcDockPanel, dock_theme_row);
   gtk_widget_class_bind_template_child (widget_class, CcDockPanel, topbar_theme_row);
-  gtk_widget_class_bind_template_child (widget_class, CcDockPanel, appmenu_theme_row);
   gtk_widget_class_bind_template_child (widget_class, CcDockPanel, logo_color_row);
+  gtk_widget_class_bind_template_child (widget_class, CcDockPanel, spot_row);
+  gtk_widget_class_bind_template_child (widget_class, CcDockPanel, shake_screenshot_row);
 
   gtk_widget_class_bind_template_callback (widget_class, on_apply_flavor_default_clicked);
   gtk_widget_class_bind_template_callback (widget_class, on_apply_flavor_noappmenu_clicked);
@@ -1063,7 +965,7 @@ cc_dock_panel_class_init (CcDockPanelClass *klass)
 }
 
 static GSettings *
-load_settings_safely (const gchar *schema_id, const gchar *fallback_dir_name)
+load_settings_safely (const gchar *schema_id, const gchar * const *fallback_dirs)
 {
   GSettingsSchemaSource *source = g_settings_schema_source_get_default ();
   g_autoptr(GSettingsSchema) schema = NULL;
@@ -1071,16 +973,46 @@ load_settings_safely (const gchar *schema_id, const gchar *fallback_dir_name)
   if (source)
     schema = g_settings_schema_source_lookup (source, schema_id, TRUE);
 
-  if (!schema && fallback_dir_name)
+  /* Recherche dans ~/.local/share/glib-2.0/schemas */
+  if (!schema)
     {
       const gchar *data_dir = g_get_user_data_dir ();
-      g_autofree gchar *schema_dir = g_build_filename (data_dir, "gnome-shell", "extensions", fallback_dir_name, "schemas", NULL);
-      if (g_file_test (schema_dir, G_FILE_TEST_IS_DIR))
+      g_autofree gchar *user_schemas = g_build_filename (data_dir, "glib-2.0", "schemas", NULL);
+      if (g_file_test (user_schemas, G_FILE_TEST_IS_DIR))
         {
           g_autoptr(GSettingsSchemaSource) ext_source =
-            g_settings_schema_source_new_from_directory (schema_dir, source, FALSE, NULL);
+            g_settings_schema_source_new_from_directory (user_schemas, source, FALSE, NULL);
           if (ext_source)
             schema = g_settings_schema_source_lookup (ext_source, schema_id, TRUE);
+        }
+    }
+
+  /* Recherche dans les dossiers d'extensions utilisateur et système */
+  if (!schema && fallback_dirs)
+    {
+      const gchar *data_dir = g_get_user_data_dir ();
+      for (guint i = 0; fallback_dirs[i] && !schema; i++)
+        {
+          g_autofree gchar *u_dir = g_build_filename (data_dir, "gnome-shell", "extensions", fallback_dirs[i], "schemas", NULL);
+          if (g_file_test (u_dir, G_FILE_TEST_IS_DIR))
+            {
+              g_autoptr(GSettingsSchemaSource) ext_source =
+                g_settings_schema_source_new_from_directory (u_dir, source, FALSE, NULL);
+              if (ext_source)
+                schema = g_settings_schema_source_lookup (ext_source, schema_id, TRUE);
+            }
+
+          if (!schema)
+            {
+              g_autofree gchar *s_dir = g_build_filename ("/usr/share/gnome-shell/extensions", fallback_dirs[i], "schemas", NULL);
+              if (g_file_test (s_dir, G_FILE_TEST_IS_DIR))
+                {
+                  g_autoptr(GSettingsSchemaSource) ext_source =
+                    g_settings_schema_source_new_from_directory (s_dir, source, FALSE, NULL);
+                  if (ext_source)
+                    schema = g_settings_schema_source_lookup (ext_source, schema_id, TRUE);
+                }
+            }
         }
     }
 
@@ -1093,29 +1025,33 @@ load_settings_safely (const gchar *schema_id, const gchar *fallback_dir_name)
 static void
 cc_dock_panel_init (CcDockPanel *self)
 {
+  static const gchar * const desktop_ext_dirs[] = {
+    "arrera-desktop@linux.arrera-software.fr",
+    "arrera-desktop",
+    NULL
+  };
+
   g_resources_register (cc_dock_get_resource ());
   gtk_widget_init_template (GTK_WIDGET (self));
 
   load_custom_css ();
 
   self->shell_settings = load_settings_safely ("org.gnome.shell", NULL);
-  self->dock_settings = load_settings_safely ("org.gnome.shell.extensions.dock", "dock@linux.arrera-software.fr");
-  self->topbar_settings = load_settings_safely ("org.gnome.shell.extensions.top-bar", "top-bar@linux.arrera-software.fr");
-  self->appmenu_settings = load_settings_safely ("org.gnome.shell.extensions.app-menu", "app-menu@linux.arrera-software.fr");
+  self->desktop_settings = load_settings_safely ("org.gnome.shell.extensions.arrera-desktop", desktop_ext_dirs);
 
-  if (self->dock_settings)
+  if (self->desktop_settings)
     {
       GSettingsSchema *schema = NULL;
-      g_object_get (self->dock_settings, "settings-schema", &schema, NULL);
+      g_object_get (self->desktop_settings, "settings-schema", &schema, NULL);
       if (schema)
         {
           if (g_settings_schema_has_key (schema, "autohide"))
-            g_settings_bind (self->dock_settings, "autohide",
+            g_settings_bind (self->desktop_settings, "autohide",
                              self->autohide_row, "active",
                              G_SETTINGS_BIND_DEFAULT | G_SETTINGS_BIND_NO_SENSITIVITY);
 
           if (g_settings_schema_has_key (schema, "icon-size"))
-            g_settings_bind_with_mapping (self->dock_settings, "icon-size",
+            g_settings_bind_with_mapping (self->desktop_settings, "icon-size",
                                           self->icon_size_row, "selected",
                                           G_SETTINGS_BIND_DEFAULT,
                                           icon_size_get_mapping,
@@ -1123,7 +1059,7 @@ cc_dock_panel_init (CcDockPanel *self)
                                           NULL, NULL);
 
           if (g_settings_schema_has_key (schema, "position"))
-            g_settings_bind_with_mapping (self->dock_settings, "position",
+            g_settings_bind_with_mapping (self->desktop_settings, "position",
                                           self->position_row, "selected",
                                           G_SETTINGS_BIND_DEFAULT,
                                           position_get_mapping,
@@ -1131,59 +1067,38 @@ cc_dock_panel_init (CcDockPanel *self)
                                           NULL, NULL);
 
           if (g_settings_schema_has_key (schema, "theme-mode"))
-            g_settings_bind_with_mapping (self->dock_settings, "theme-mode",
+            g_settings_bind_with_mapping (self->desktop_settings, "theme-mode",
                                           self->dock_theme_row, "selected",
                                           G_SETTINGS_BIND_DEFAULT,
                                           dock_theme_get_mapping,
                                           dock_theme_set_mapping,
                                           NULL, NULL);
 
-          if (g_settings_schema_has_key (schema, "logo-color"))
-            g_settings_bind_with_mapping (self->dock_settings, "logo-color",
-                                          self->logo_color_row, "selected",
-                                          G_SETTINGS_BIND_DEFAULT,
-                                          logo_color_get_mapping,
-                                          logo_color_set_mapping,
-                                          NULL, NULL);
-
-          g_settings_schema_unref (schema);
-        }
-
-      g_signal_connect_swapped (self->dock_settings, "changed::logo-color",
-                                G_CALLBACK (on_dock_logo_color_changed), self);
-    }
-
-  if (self->topbar_settings)
-    {
-      GSettingsSchema *schema = NULL;
-      g_object_get (self->topbar_settings, "settings-schema", &schema, NULL);
-      if (schema)
-        {
-          if (g_settings_schema_has_key (schema, "theme"))
-            g_settings_bind_with_mapping (self->topbar_settings, "theme",
+          if (g_settings_schema_has_key (schema, "topbar-theme"))
+            g_settings_bind_with_mapping (self->desktop_settings, "topbar-theme",
                                           self->topbar_theme_row, "selected",
                                           G_SETTINGS_BIND_DEFAULT,
                                           topbar_theme_get_mapping,
                                           topbar_theme_set_mapping,
                                           NULL, NULL);
 
-          g_settings_schema_unref (schema);
-        }
-    }
-
-  if (self->appmenu_settings)
-    {
-      GSettingsSchema *schema = NULL;
-      g_object_get (self->appmenu_settings, "settings-schema", &schema, NULL);
-      if (schema)
-        {
-          if (g_settings_schema_has_key (schema, "theme-mode"))
-            g_settings_bind_with_mapping (self->appmenu_settings, "theme-mode",
-                                          self->appmenu_theme_row, "selected",
+          if (g_settings_schema_has_key (schema, "logo-color"))
+            g_settings_bind_with_mapping (self->desktop_settings, "logo-color",
+                                          self->logo_color_row, "selected",
                                           G_SETTINGS_BIND_DEFAULT,
-                                          appmenu_theme_get_mapping,
-                                          appmenu_theme_set_mapping,
+                                          logo_color_get_mapping,
+                                          logo_color_set_mapping,
                                           NULL, NULL);
+
+          if (self->spot_row && g_settings_schema_has_key (schema, "enable-arrera-spot"))
+            g_settings_bind (self->desktop_settings, "enable-arrera-spot",
+                             self->spot_row, "active",
+                             G_SETTINGS_BIND_DEFAULT);
+
+          if (self->shake_screenshot_row && g_settings_schema_has_key (schema, "enable-shake-to-screenshot"))
+            g_settings_bind (self->desktop_settings, "enable-shake-to-screenshot",
+                             self->shake_screenshot_row, "active",
+                             G_SETTINGS_BIND_DEFAULT);
 
           g_settings_schema_unref (schema);
         }
@@ -1192,10 +1107,29 @@ cc_dock_panel_init (CcDockPanel *self)
   self->current_flavor = detect_current_flavor (self);
   update_selected_flavor_highlight (self);
 
-  if (self->dock_settings)
-    g_signal_connect_swapped (self->dock_settings, "changed", G_CALLBACK (update_selected_flavor_highlight), self);
-  if (self->topbar_settings)
-    g_signal_connect_swapped (self->topbar_settings, "changed", G_CALLBACK (update_selected_flavor_highlight), self);
+  if (self->shell_settings)
+    {
+      gboolean need_apply = FALSE;
+      for (gsize i = 0; i < G_N_ELEMENTS (flavor_default_extensions); i++)
+        {
+          if (flavor_default_extensions[i].enable &&
+              !is_extension_enabled (self->shell_settings, flavor_default_extensions[i].uuid))
+            {
+              need_apply = TRUE;
+              break;
+            }
+        }
+
+      if (need_apply)
+        {
+          apply_extensions_config (self->shell_settings,
+                                   flavor_default_extensions,
+                                   G_N_ELEMENTS (flavor_default_extensions));
+        }
+    }
+
+  if (self->desktop_settings)
+    g_signal_connect_swapped (self->desktop_settings, "changed", G_CALLBACK (update_selected_flavor_highlight), self);
   if (self->shell_settings)
     g_signal_connect_swapped (self->shell_settings, "changed::enabled-extensions", G_CALLBACK (update_selected_flavor_highlight), self);
 }

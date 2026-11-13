@@ -88,7 +88,7 @@ template $CcDockPanel: $CcPanel {
                       }
 
                       Label {
-                        label: _("Dock en bas centré à masquage auto, barre supérieure standard et menu d'applications complet.");
+                        label: _("Dock flottant en bas centré, barre supérieure standard, menu d'applications complet et Arrera Spot.");
                         wrap: true;
                         max-width-chars: 30;
                       }
@@ -404,7 +404,7 @@ template $CcDockPanel: $CcPanel {
                       }
 
                       Label {
-                        label: _("Inspiré de NeXTSTEP : dock à tuiles détachées à droite, contrôles intégrés et barre supérieure masquée.");
+                        label: _("Inspiré de NeXTSTEP : dock à tuiles détachées à droite, contrôles intégrés, barre supérieure masquée et Arrera Spot.");
                         wrap: true;
                         max-width-chars: 30;
                       }
@@ -451,7 +451,8 @@ template $CcDockPanel: $CcPanel {
           title: _("Couleurs et thèmes");
 
           Adw.ComboRow dock_theme_row {
-            title: _("Thème du dock");
+            title: _("Thème visuel Arrera");
+            subtitle: _("Style appliqué au dock, au lanceur et à Spot");
             model: StringList {
               strings [
                 _("Expressif (fond teinté)"),
@@ -475,17 +476,6 @@ template $CcDockPanel: $CcPanel {
             };
           }
 
-          Adw.ComboRow appmenu_theme_row {
-            title: _("Thème du menu d'applications");
-            model: StringList {
-              strings [
-                _("Expressif (fond teinté)"),
-                _("Contour accentué"),
-                _("Standard GNOME"),
-              ]
-            };
-          }
-
           Adw.ComboRow logo_color_row {
             title: _("Couleur du logo Arrera");
             model: StringList {
@@ -495,6 +485,20 @@ template $CcDockPanel: $CcPanel {
                 _("Noir"),
               ]
             };
+          }
+        }
+
+        Adw.PreferencesGroup {
+          title: _("Recherche et raccourcis");
+
+          Adw.SwitchRow spot_row {
+            title: _("Arrera Spot");
+            subtitle: _("Barre de recherche rapide Spotlight (Super+Espace)");
+          }
+
+          Adw.SwitchRow shake_screenshot_row {
+            title: _("Capture d'écran par secouement");
+            subtitle: _("Déclenche l'outil de capture en secouant rapidement la souris");
           }
         }
       };

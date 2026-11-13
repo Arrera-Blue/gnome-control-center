@@ -42,7 +42,10 @@ $SUDO $DNF install -y \
     gettext \
     docbook-style-xsl \
     libxslt \
-    tecla
+    tecla \
+    gpaste \
+    gnome-shell-extension-gpaste \
+    gnome-shell-extension-appindicator
 
 # Tenter d'utiliser builddep si disponible pour récupérer automatiquement les dépendances GNOME standard
 echo "📚 [3/3] Installation des bibliothèques de développement GNOME..."
